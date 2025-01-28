@@ -28,9 +28,13 @@ namespace Survivor_of_the_Bulge
 
         private MenuState menuState;
 
-        // Map size (Adjust to match your map dimensions)
-        private const int MapWidth = 1600; // Width of the map
-        private const int MapHeight = 1600; // Height of the map
+        // Original map size
+        private const int MapWidth = 1600;
+        private const int MapHeight = 1600;
+
+        // Scaling factor
+        private float scaleX;
+        private float scaleY;
 
         public Game1()
         {
@@ -38,15 +42,19 @@ namespace Survivor_of_the_Bulge
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            // Set window size to match map dimensions
-            _graphics.PreferredBackBufferWidth = MapWidth;
-            _graphics.PreferredBackBufferHeight = MapHeight;
-            _graphics.ApplyChanges(); // Apply the changes to the window
+            // Set window size to a more screen-friendly resolution (e.g., 1280x720)
+            _graphics.PreferredBackBufferWidth = 1280;
+            _graphics.PreferredBackBufferHeight = 720;
+            _graphics.ApplyChanges();
         }
 
         protected override void Initialize()
         {
             currentState = GameState.MainMenu;
+
+            // Calculate scaling factors based on the current window size
+            scaleX = (float)_graphics.PreferredBackBufferWidth / MapWidth;
+            scaleY = (float)_graphics.PreferredBackBufferHeight / MapHeight;
 
             base.Initialize();
         }
@@ -202,11 +210,11 @@ namespace Survivor_of_the_Bulge
             switch (currentState)
             {
                 case GameState.MainMenu:
-                    menuState.Draw(_spriteBatch);
+                    _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
                     break;
 
                 case GameState.GreenForestCentre:
-                    _spriteBatch.Draw(greenForestBackground, Vector2.Zero, Color.White);
+                    _spriteBatch.Draw(greenForestBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
                     player.Draw(_spriteBatch);
                     enemy.Draw(_spriteBatch);
                     foreach (var box in obstacles)
@@ -216,22 +224,22 @@ namespace Survivor_of_the_Bulge
                     break;
 
                 case GameState.ForestTop:
-                    _spriteBatch.Draw(forestTopBackground, Vector2.Zero, Color.White);
+                    _spriteBatch.Draw(forestTopBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
                     player.Draw(_spriteBatch);
                     break;
 
                 case GameState.ForestButtom:
-                    _spriteBatch.Draw(forestButtomBackground, Vector2.Zero, Color.White);
+                    _spriteBatch.Draw(forestButtomBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
                     player.Draw(_spriteBatch);
                     break;
 
                 case GameState.ForestLeft:
-                    _spriteBatch.Draw(forestLeftBackground, Vector2.Zero, Color.White);
+                    _spriteBatch.Draw(forestLeftBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
                     player.Draw(_spriteBatch);
                     break;
 
                 case GameState.ForestRight:
-                    _spriteBatch.Draw(forestRightBackground, Vector2.Zero, Color.White);
+                    _spriteBatch.Draw(forestRightBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
                     player.Draw(_spriteBatch);
                     break;
             }
