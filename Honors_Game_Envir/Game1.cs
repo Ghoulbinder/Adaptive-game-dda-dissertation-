@@ -27,9 +27,10 @@ namespace Survivor_of_the_Bulge
 
         private MenuState menuState;
 
-        private const int TileSize = 25; // Each tile fits 4 smaller cells in the original size
-        private Rectangle mapBounds; // Defines the map boundaries
-        private HashSet<Point> inaccessibleGrids; // Set of inaccessible grid positions
+        private const int TileSize = 25;
+        private Rectangle mapBounds;
+
+        private Dictionary<Point, (GameState, Point)> transitions;
 
         public Game1()
         {
@@ -37,85 +38,61 @@ namespace Survivor_of_the_Bulge
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            // Set window size
-            _graphics.PreferredBackBufferWidth = 1600; // Window width
-            _graphics.PreferredBackBufferHeight = 980; // Window height
+            _graphics.PreferredBackBufferWidth = 1600;
+            _graphics.PreferredBackBufferHeight = 980;
             _graphics.ApplyChanges();
         }
 
         protected override void Initialize()
         {
             currentState = GameState.MainMenu;
-
-            // Define map bounds to match the original map size
             mapBounds = new Rectangle(0, 0, 1600, 1600);
-
-            // Initialize inaccessible grids
-            InitializeInaccessibleGrids();
-
+            InitializeTransitions();
             base.Initialize();
         }
 
-        private void InitializeInaccessibleGrids()
+        private void InitializeTransitions()
         {
-            inaccessibleGrids = new HashSet<Point>();
+            transitions = new Dictionary<Point, (GameState, Point)>();
 
-            // Mark the entire boundary as inaccessible
-            int rows = mapBounds.Height / TileSize;
-            int cols = mapBounds.Width / TileSize;
+            // GreenForestCentre transitions
+            transitions[new Point(0, 29)] = (GameState.ForestTop, new Point(38, 29));
+            transitions[new Point(0, 30)] = (GameState.ForestTop, new Point(38, 30));
+            transitions[new Point(0, 31)] = (GameState.ForestTop, new Point(38, 31));
 
-            for (int row = 0; row < rows; row++)
-            {
-                inaccessibleGrids.Add(new Point(row, 0)); // Left edge
-                inaccessibleGrids.Add(new Point(row, cols - 1)); // Right edge
-            }
+            transitions[new Point(38, 29)] = (GameState.ForestButtom, new Point(0, 29));
+            transitions[new Point(38, 30)] = (GameState.ForestButtom, new Point(0, 30));
+            transitions[new Point(38, 31)] = (GameState.ForestButtom, new Point(0, 31));
 
-            for (int col = 0; col < cols; col++)
-            {
-                inaccessibleGrids.Add(new Point(0, col)); // Top edge
-                inaccessibleGrids.Add(new Point(rows - 1, col)); // Bottom edge
-            }
+            transitions[new Point(17, 0)] = (GameState.ForestLeft, new Point(17, 63));
+            transitions[new Point(18, 0)] = (GameState.ForestLeft, new Point(18, 63));
 
-            // Make pathways accessible
-            // Top pathway
-            for (int row = 0; row <= 4; row++)
-            {
-                for (int col = 29; col <= 31; col++)
-                {
-                    inaccessibleGrids.Remove(new Point(row, col));
-                }
-            }
+            transitions[new Point(17, 63)] = (GameState.ForestRight, new Point(17, 0));
+            transitions[new Point(18, 63)] = (GameState.ForestRight, new Point(18, 0));
 
-            // Bottom pathway
-            for (int row = 34; row <= 38; row++)
-            {
-                for (int col = 29; col <= 31; col++)
-                {
-                    inaccessibleGrids.Remove(new Point(row, col));
-                }
-            }
+            // ForestTop transitions
+            transitions[new Point(38, 29)] = (GameState.GreenForestCentre, new Point(0, 29));
+            transitions[new Point(38, 30)] = (GameState.GreenForestCentre, new Point(0, 30));
+            transitions[new Point(38, 31)] = (GameState.GreenForestCentre, new Point(0, 31));
 
-            // Left pathway
-            for (int col = 0; col <= 5; col++)
-            {
-                inaccessibleGrids.Remove(new Point(17, col));
-            }
+            // ForestButtom transitions
+            transitions[new Point(0, 29)] = (GameState.GreenForestCentre, new Point(38, 29));
+            transitions[new Point(0, 30)] = (GameState.GreenForestCentre, new Point(38, 30));
+            transitions[new Point(0, 31)] = (GameState.GreenForestCentre, new Point(38, 31));
 
-            // Right pathway
-            for (int row = 17; row <= 18; row++)
-            {
-                for (int col = 58; col <= 63; col++)
-                {
-                    inaccessibleGrids.Remove(new Point(row, col));
-                }
-            }
+            // ForestLeft transitions
+            transitions[new Point(17, 63)] = (GameState.GreenForestCentre, new Point(17, 0));
+            transitions[new Point(18, 63)] = (GameState.GreenForestCentre, new Point(18, 0));
+
+            // ForestRight transitions
+            transitions[new Point(17, 0)] = (GameState.GreenForestCentre, new Point(17, 63));
+            transitions[new Point(18, 0)] = (GameState.GreenForestCentre, new Point(18, 63));
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // Load background images
             mainMenuBackground = Content.Load<Texture2D>("Images/Maps/mmBackground");
             greenForestBackground = Content.Load<Texture2D>("Images/Maps/greenForestCentre");
             forestTopBackground = Content.Load<Texture2D>("Images/Maps/snowForestTop");
@@ -123,13 +100,11 @@ namespace Survivor_of_the_Bulge
             forestLeftBackground = Content.Load<Texture2D>("Images/Maps/snowForestLeft");
             forestRightBackground = Content.Load<Texture2D>("Images/Maps/snowForestRight");
 
-            // Create a white texture for grid lines
             gridLineTexture = new Texture2D(GraphicsDevice, 1, 1);
             gridLineTexture.SetData(new[] { Color.White });
 
             gameFont = Content.Load<SpriteFont>("Fonts/jungleFont");
 
-            // Initialize player
             player = new Player(
                 Content.Load<Texture2D>("Images/Soldier/backWalking"),
                 Content.Load<Texture2D>("Images/Soldier/frontWalking"),
@@ -137,7 +112,6 @@ namespace Survivor_of_the_Bulge
                 new Vector2(100, 100)
             );
 
-            // Initialize menu
             menuState = new MenuState(gameFont, mainMenuBackground);
         }
 
@@ -156,29 +130,21 @@ namespace Survivor_of_the_Bulge
                 Vector2 previousPosition = player.Position;
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
 
-                if (!IsPositionAccessible(player.Position))
+                Point gridPosition = new Point((int)(player.Position.Y / TileSize), (int)(player.Position.X / TileSize));
+
+                if (transitions.ContainsKey(gridPosition))
                 {
-                    player.Position = previousPosition; // Revert to the previous position
+                    var (nextState, newGridPosition) = transitions[gridPosition];
+                    currentState = nextState;
+                    player.Position = new Vector2(newGridPosition.Y * TileSize, newGridPosition.X * TileSize);
                 }
             }
 
             base.Update(gameTime);
         }
 
-        private bool IsPositionAccessible(Vector2 position)
-        {
-            int row = (int)(position.Y / TileSize);
-            int col = (int)(position.X / TileSize);
-
-            if (row < 0 || col < 0 || row >= mapBounds.Height / TileSize || col >= mapBounds.Width / TileSize)
-                return false; // Out of bounds is inaccessible
-
-            return !inaccessibleGrids.Contains(new Point(row, col));
-        }
-
         private void DrawGridOverlay(int mapWidth, int mapHeight, float scaleX, float scaleY)
         {
-            // Adjust for scaled tile size
             int scaledTileSize = (int)(TileSize * scaleX);
 
             for (int y = 0; y <= mapHeight; y += scaledTileSize)
@@ -214,7 +180,33 @@ namespace Survivor_of_the_Bulge
                     player.Draw(_spriteBatch);
                     break;
 
-                    // Add other states similarly if needed
+                case GameState.ForestTop:
+                    _spriteBatch.Draw(forestTopBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
+                    player.Draw(_spriteBatch);
+                    break;
+
+                case GameState.ForestButtom:
+                    _spriteBatch.Draw(forestButtomBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
+                    player.Draw(_spriteBatch);
+                    break;
+
+                case GameState.ForestLeft:
+                    _spriteBatch.Draw(forestLeftBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
+                    player.Draw(_spriteBatch);
+                    break;
+
+                case GameState.ForestRight:
+                    _spriteBatch.Draw(forestRightBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
+                    player.Draw(_spriteBatch);
+                    break;
             }
 
             _spriteBatch.End();
