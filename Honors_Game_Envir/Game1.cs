@@ -11,9 +11,6 @@ namespace Survivor_of_the_Bulge
         private SpriteBatch _spriteBatch;
 
         private Player player;
-        private Enemy enemy;
-        private TreesBox[] obstacles;
-        private Silos[] silos;
 
         private enum GameState { MainMenu, GreenForestCentre, ForestTop, ForestButtom, ForestLeft, ForestRight }
         private GameState currentState;
@@ -24,17 +21,13 @@ namespace Survivor_of_the_Bulge
         private Texture2D forestButtomBackground;
         private Texture2D forestLeftBackground;
         private Texture2D forestRightBackground;
+        private Texture2D gridLineTexture;
         private SpriteFont gameFont;
 
         private MenuState menuState;
 
-        // Original map size
-        private const int MapWidth = 1600;
-        private const int MapHeight = 1600;
-
-        // Scaling factor
-        private float scaleX;
-        private float scaleY;
+        private const int TileSize = 25; // Each tile fits 4 smaller cells in the original size
+        private Rectangle mapBounds; // Defines the map boundaries
 
         public Game1()
         {
@@ -42,9 +35,9 @@ namespace Survivor_of_the_Bulge
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            // Set window size to a more screen-friendly resolution (e.g., 1280x720)
-            _graphics.PreferredBackBufferWidth = 1280;
-            _graphics.PreferredBackBufferHeight = 720;
+            // Set window size
+            _graphics.PreferredBackBufferWidth = 1600; // Window width
+            _graphics.PreferredBackBufferHeight = 980; // Window height
             _graphics.ApplyChanges();
         }
 
@@ -52,9 +45,8 @@ namespace Survivor_of_the_Bulge
         {
             currentState = GameState.MainMenu;
 
-            // Calculate scaling factors based on the current window size
-            scaleX = (float)_graphics.PreferredBackBufferWidth / MapWidth;
-            scaleY = (float)_graphics.PreferredBackBufferHeight / MapHeight;
+            // Define map bounds to match the original map size
+            mapBounds = new Rectangle(0, 0, 1600, 1600);
 
             base.Initialize();
         }
@@ -63,16 +55,21 @@ namespace Survivor_of_the_Bulge
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // Load Assets
+            // Load background images
             mainMenuBackground = Content.Load<Texture2D>("Images/Maps/mmBackground");
             greenForestBackground = Content.Load<Texture2D>("Images/Maps/greenForestCentre");
             forestTopBackground = Content.Load<Texture2D>("Images/Maps/snowForestTop");
             forestButtomBackground = Content.Load<Texture2D>("Images/Maps/snowForestButtom");
             forestLeftBackground = Content.Load<Texture2D>("Images/Maps/snowForestLeft");
             forestRightBackground = Content.Load<Texture2D>("Images/Maps/snowForestRight");
+
+            // Create a white texture for grid lines
+            gridLineTexture = new Texture2D(GraphicsDevice, 1, 1);
+            gridLineTexture.SetData(new[] { Color.White });
+
             gameFont = Content.Load<SpriteFont>("Fonts/jungleFont");
 
-            // Initialize Player
+            // Initialize player
             player = new Player(
                 Content.Load<Texture2D>("Images/Soldier/backWalking"),
                 Content.Load<Texture2D>("Images/Soldier/frontWalking"),
@@ -80,30 +77,8 @@ namespace Survivor_of_the_Bulge
                 new Vector2(100, 100)
             );
 
-            // Initialize Menu
+            // Initialize menu
             menuState = new MenuState(gameFont, mainMenuBackground);
-
-            // Load enemy textures for all directions
-            enemy = new Enemy(
-                Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"), // Flip this for right walking
-                new Vector2(200, 200)
-            );
-
-            // Initialize Obstacles
-            obstacles = new TreesBox[]
-            {
-                new TreesBox(Content.Load<Texture2D>("Images/Maps/box"), 300, 300),
-                new TreesBox(Content.Load<Texture2D>("Images/Maps/box2"), 400, 400)
-            };
-
-            // Initialize Silos
-            silos = new Silos[]
-            {
-                new Silos(Content.Load<Texture2D>("Images/Maps/box3"), 500, 500)
-            };
         }
 
         protected override void Update(GameTime gameTime)
@@ -111,93 +86,54 @@ namespace Survivor_of_the_Bulge
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            switch (currentState)
+            if (Keyboard.GetState().IsKeyDown(Keys.Enter) && currentState == GameState.MainMenu)
             {
-                case GameState.MainMenu:
-                    if (menuState.Update(gameTime))
-                        currentState = GameState.GreenForestCentre;
-                    break;
+                currentState = GameState.GreenForestCentre;
+            }
 
-                case GameState.GreenForestCentre:
-                    player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
-
-                    // Check Collisions
-                    HandleCollisions();
-
-                    // Handle State Transitions
-                    if (player.Position.Y <= 50)
-                    {
-                        currentState = GameState.ForestTop;
-                    }
-                    else if (player.Position.Y >= GraphicsDevice.Viewport.Height - 50)
-                    {
-                        currentState = GameState.ForestButtom;
-                    }
-                    else if (player.Position.X <= 50)
-                    {
-                        currentState = GameState.ForestLeft;
-                    }
-                    else if (player.Position.X >= GraphicsDevice.Viewport.Width - 50)
-                    {
-                        currentState = GameState.ForestRight;
-                    }
-                    break;
-
-                case GameState.ForestTop:
-                    player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
-                    if (player.Position.Y >= GraphicsDevice.Viewport.Height - 50)
-                        currentState = GameState.GreenForestCentre;
-                    break;
-
-                case GameState.ForestButtom:
-                    player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
-                    if (player.Position.Y <= 50)
-                        currentState = GameState.GreenForestCentre;
-                    break;
-
-                case GameState.ForestLeft:
-                    player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
-                    if (player.Position.X >= GraphicsDevice.Viewport.Width - 50)
-                        currentState = GameState.GreenForestCentre;
-                    break;
-
-                case GameState.ForestRight:
-                    player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
-                    if (player.Position.X <= 50)
-                        currentState = GameState.GreenForestCentre;
-                    break;
+            if (currentState != GameState.MainMenu)
+            {
+                player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
             }
 
             base.Update(gameTime);
         }
 
-        private void HandleCollisions()
+        private void DrawGridOverlay(int mapWidth, int mapHeight, float scaleX, float scaleY)
         {
-            // Player vs Obstacles
-            foreach (var box in obstacles)
-            {
-                if (player.Bounds.Intersects(box.Bounds))
-                {
-                    // Prevent movement through obstacles
-                    player.ResolveCollision(box.Bounds);
-                }
-            }
+            // Adjust for scaled tile size
+            int scaledTileSize = (int)(TileSize * scaleX);
 
-            // Player vs Silos
-            foreach (var silo in silos)
+            for (int y = 0; y <= mapHeight; y += scaledTileSize)
             {
-                if (player.Bounds.Intersects(silo.Bounds))
+                for (int x = 0; x <= mapWidth; x += scaledTileSize)
                 {
-                    // Logic for silo interaction
-                    Console.WriteLine("Player hit a silo!");
-                }
-            }
+                    // Draw horizontal lines
+                    _spriteBatch.Draw(gridLineTexture, new Rectangle(0, y, mapWidth, 1), Color.White * 0.3f);
 
-            // Player vs Enemy
-            if (player.Bounds.Intersects(enemy.Bounds))
-            {
-                // Logic for enemy collision
-                Console.WriteLine("Player hit an enemy!");
+                    // Draw vertical lines
+                    _spriteBatch.Draw(gridLineTexture, new Rectangle(x, 0, 1, mapHeight), Color.White * 0.3f);
+
+                    // Draw cell numbers (row.column) only for the top-left corner of the tile
+                    int row = y / scaledTileSize;
+                    int column = x / scaledTileSize;
+
+                    // Avoid overlapping numbers outside the map boundaries
+                    if (x < mapWidth && y < mapHeight)
+                    {
+                        _spriteBatch.DrawString(
+                            gameFont,
+                            $"{row},{column}",
+                            new Vector2(x + 5, y + 5), // Offset the numbers slightly
+                            Color.Black,
+                            0f,
+                            Vector2.Zero,
+                            0.5f, // Scale down the font size
+                            SpriteEffects.None,
+                            0f
+                        );
+                    }
+                }
             }
         }
 
@@ -207,39 +143,48 @@ namespace Survivor_of_the_Bulge
 
             _spriteBatch.Begin();
 
+            float scaleX = (float)_graphics.PreferredBackBufferWidth / mapBounds.Width;
+            float scaleY = (float)_graphics.PreferredBackBufferHeight / mapBounds.Height;
+
             switch (currentState)
             {
                 case GameState.MainMenu:
-                    _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
+                    menuState.Draw(_spriteBatch);
                     break;
 
                 case GameState.GreenForestCentre:
-                    _spriteBatch.Draw(greenForestBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    _spriteBatch.Draw(greenForestBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
                     player.Draw(_spriteBatch);
-                    enemy.Draw(_spriteBatch);
-                    foreach (var box in obstacles)
-                        box.Draw(_spriteBatch);
-                    foreach (var silo in silos)
-                        silo.Draw(_spriteBatch);
                     break;
 
                 case GameState.ForestTop:
-                    _spriteBatch.Draw(forestTopBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    _spriteBatch.Draw(forestTopBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
                     player.Draw(_spriteBatch);
                     break;
 
                 case GameState.ForestButtom:
-                    _spriteBatch.Draw(forestButtomBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    _spriteBatch.Draw(forestButtomBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
                     player.Draw(_spriteBatch);
                     break;
 
                 case GameState.ForestLeft:
-                    _spriteBatch.Draw(forestLeftBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    _spriteBatch.Draw(forestLeftBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
                     player.Draw(_spriteBatch);
                     break;
 
                 case GameState.ForestRight:
-                    _spriteBatch.Draw(forestRightBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    _spriteBatch.Draw(forestRightBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
+                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
                     player.Draw(_spriteBatch);
                     break;
             }
