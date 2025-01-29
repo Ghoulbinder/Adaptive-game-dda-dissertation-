@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -28,6 +29,7 @@ namespace Survivor_of_the_Bulge
 
         private const int TileSize = 25; // Each tile fits 4 smaller cells in the original size
         private Rectangle mapBounds; // Defines the map boundaries
+        private HashSet<Point> inaccessibleGrids; // Set of inaccessible grid positions
 
         public Game1()
         {
@@ -48,7 +50,65 @@ namespace Survivor_of_the_Bulge
             // Define map bounds to match the original map size
             mapBounds = new Rectangle(0, 0, 1600, 1600);
 
+            // Initialize inaccessible grids
+            InitializeInaccessibleGrids();
+
             base.Initialize();
+        }
+
+        private void InitializeInaccessibleGrids()
+        {
+            inaccessibleGrids = new HashSet<Point>();
+
+            // Mark the entire boundary as inaccessible
+            int rows = mapBounds.Height / TileSize;
+            int cols = mapBounds.Width / TileSize;
+
+            for (int row = 0; row < rows; row++)
+            {
+                inaccessibleGrids.Add(new Point(row, 0)); // Left edge
+                inaccessibleGrids.Add(new Point(row, cols - 1)); // Right edge
+            }
+
+            for (int col = 0; col < cols; col++)
+            {
+                inaccessibleGrids.Add(new Point(0, col)); // Top edge
+                inaccessibleGrids.Add(new Point(rows - 1, col)); // Bottom edge
+            }
+
+            // Make pathways accessible
+            // Top pathway
+            for (int row = 0; row <= 4; row++)
+            {
+                for (int col = 29; col <= 31; col++)
+                {
+                    inaccessibleGrids.Remove(new Point(row, col));
+                }
+            }
+
+            // Bottom pathway
+            for (int row = 34; row <= 38; row++)
+            {
+                for (int col = 29; col <= 31; col++)
+                {
+                    inaccessibleGrids.Remove(new Point(row, col));
+                }
+            }
+
+            // Left pathway
+            for (int col = 0; col <= 5; col++)
+            {
+                inaccessibleGrids.Remove(new Point(17, col));
+            }
+
+            // Right pathway
+            for (int row = 17; row <= 18; row++)
+            {
+                for (int col = 58; col <= 63; col++)
+                {
+                    inaccessibleGrids.Remove(new Point(row, col));
+                }
+            }
         }
 
         protected override void LoadContent()
@@ -93,10 +153,27 @@ namespace Survivor_of_the_Bulge
 
             if (currentState != GameState.MainMenu)
             {
+                Vector2 previousPosition = player.Position;
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
+
+                if (!IsPositionAccessible(player.Position))
+                {
+                    player.Position = previousPosition; // Revert to the previous position
+                }
             }
 
             base.Update(gameTime);
+        }
+
+        private bool IsPositionAccessible(Vector2 position)
+        {
+            int row = (int)(position.Y / TileSize);
+            int col = (int)(position.X / TileSize);
+
+            if (row < 0 || col < 0 || row >= mapBounds.Height / TileSize || col >= mapBounds.Width / TileSize)
+                return false; // Out of bounds is inaccessible
+
+            return !inaccessibleGrids.Contains(new Point(row, col));
         }
 
         private void DrawGridOverlay(int mapWidth, int mapHeight, float scaleX, float scaleY)
@@ -108,31 +185,8 @@ namespace Survivor_of_the_Bulge
             {
                 for (int x = 0; x <= mapWidth; x += scaledTileSize)
                 {
-                    // Draw horizontal lines
                     _spriteBatch.Draw(gridLineTexture, new Rectangle(0, y, mapWidth, 1), Color.White * 0.3f);
-
-                    // Draw vertical lines
                     _spriteBatch.Draw(gridLineTexture, new Rectangle(x, 0, 1, mapHeight), Color.White * 0.3f);
-
-                    // Draw cell numbers (row.column) only for the top-left corner of the tile
-                    int row = y / scaledTileSize;
-                    int column = x / scaledTileSize;
-
-                    // Avoid overlapping numbers outside the map boundaries
-                    if (x < mapWidth && y < mapHeight)
-                    {
-                        _spriteBatch.DrawString(
-                            gameFont,
-                            $"{row},{column}",
-                            new Vector2(x + 5, y + 5), // Offset the numbers slightly
-                            Color.Black,
-                            0f,
-                            Vector2.Zero,
-                            0.5f, // Scale down the font size
-                            SpriteEffects.None,
-                            0f
-                        );
-                    }
                 }
             }
         }
@@ -160,33 +214,7 @@ namespace Survivor_of_the_Bulge
                     player.Draw(_spriteBatch);
                     break;
 
-                case GameState.ForestTop:
-                    _spriteBatch.Draw(forestTopBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
-
-                case GameState.ForestButtom:
-                    _spriteBatch.Draw(forestButtomBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
-
-                case GameState.ForestLeft:
-                    _spriteBatch.Draw(forestLeftBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
-
-                case GameState.ForestRight:
-                    _spriteBatch.Draw(forestRightBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
+                    // Add other states similarly if needed
             }
 
             _spriteBatch.End();
