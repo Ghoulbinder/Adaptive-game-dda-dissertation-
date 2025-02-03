@@ -28,6 +28,8 @@ namespace Survivor_of_the_Bulge
         private const int TileSize = 25;
         private Rectangle mapBounds;
 
+        private bool showGrid = false; // Toggle grid visibility
+
         private List<(Rectangle transitionZone, GameState fromState, GameState toState)> transitions;
         private Dictionary<GameState, int[,]> mapGrids;
 
@@ -58,28 +60,13 @@ namespace Survivor_of_the_Bulge
 
             transitions = new List<(Rectangle, GameState, GameState)>
             {
-                // GreenForestCentre to ForestTop (Expanded Edge)
                 (new Rectangle(0, 0, screenWidth, TileSize * 2), GameState.GreenForestCentre, GameState.ForestTop),
-
-                // ForestTop to GreenForestCentre
                 (new Rectangle(0, screenHeight - (TileSize * 2), screenWidth, TileSize * 2), GameState.ForestTop, GameState.GreenForestCentre),
-
-                // GreenForestCentre to ForestButtom (Expanded Edge)
                 (new Rectangle(0, screenHeight - (TileSize * 2), screenWidth, TileSize * 2), GameState.GreenForestCentre, GameState.ForestButtom),
-
-                // ForestButtom to GreenForestCentre
                 (new Rectangle(0, 0, screenWidth, TileSize * 2), GameState.ForestButtom, GameState.GreenForestCentre),
-
-                // GreenForestCentre to ForestLeft (Expanded Edge)
                 (new Rectangle(0, 0, TileSize * 2, screenHeight), GameState.GreenForestCentre, GameState.ForestLeft),
-
-                // ForestLeft to GreenForestCentre
                 (new Rectangle(screenWidth - (TileSize * 2), 0, TileSize * 2, screenHeight), GameState.ForestLeft, GameState.GreenForestCentre),
-
-                // GreenForestCentre to ForestRight (Expanded Edge)
                 (new Rectangle(screenWidth - (TileSize * 2), 0, TileSize * 2, screenHeight), GameState.GreenForestCentre, GameState.ForestRight),
-
-                // ForestRight to GreenForestCentre
                 (new Rectangle(0, 0, TileSize * 2, screenHeight), GameState.ForestRight, GameState.GreenForestCentre)
             };
         }
@@ -129,6 +116,9 @@ namespace Survivor_of_the_Bulge
         {
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+
+            if (Keyboard.GetState().IsKeyDown(Keys.G)) // Toggle grid visibility with 'G'
+                showGrid = !showGrid;
 
             if (Keyboard.GetState().IsKeyDown(Keys.Enter) && currentState == GameState.MainMenu)
             {
@@ -180,13 +170,16 @@ namespace Survivor_of_the_Bulge
 
             _spriteBatch.Draw(currentBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
 
-            // Draw Grid Overlay
-            for (int y = 0; y < _graphics.PreferredBackBufferHeight; y += TileSize)
+            // Draw Grid Overlay (Only if Enabled)
+            if (showGrid)
             {
-                for (int x = 0; x < _graphics.PreferredBackBufferWidth; x += TileSize)
+                for (int y = 0; y < _graphics.PreferredBackBufferHeight; y += TileSize)
                 {
-                    _spriteBatch.Draw(gridLineTexture, new Rectangle(x, 0, 1, _graphics.PreferredBackBufferHeight), Color.White * 0.3f);
-                    _spriteBatch.Draw(gridLineTexture, new Rectangle(0, y, _graphics.PreferredBackBufferWidth, 1), Color.White * 0.3f);
+                    for (int x = 0; x < _graphics.PreferredBackBufferWidth; x += TileSize)
+                    {
+                        _spriteBatch.Draw(gridLineTexture, new Rectangle(x, 0, 1, _graphics.PreferredBackBufferHeight), Color.White * 0.3f);
+                        _spriteBatch.Draw(gridLineTexture, new Rectangle(0, y, _graphics.PreferredBackBufferWidth, 1), Color.White * 0.3f);
+                    }
                 }
             }
 
