@@ -12,7 +12,6 @@ namespace Survivor_of_the_Bulge
         private SpriteBatch _spriteBatch;
 
         private Player player;
-
         private enum GameState { MainMenu, GreenForestCentre, ForestTop, ForestButtom, ForestLeft, ForestRight }
         private GameState currentState;
 
@@ -26,11 +25,11 @@ namespace Survivor_of_the_Bulge
         private SpriteFont gameFont;
 
         private MenuState menuState;
-
         private const int TileSize = 25;
         private Rectangle mapBounds;
 
-        private Dictionary<Point, (GameState, Point)> transitions;
+        private List<(Rectangle transitionZone, GameState fromState, GameState toState)> transitions;
+        private Dictionary<GameState, int[,]> mapGrids;
 
         public Game1()
         {
@@ -46,47 +45,58 @@ namespace Survivor_of_the_Bulge
         protected override void Initialize()
         {
             currentState = GameState.MainMenu;
-            mapBounds = new Rectangle(0, 0, 1600, 1600);
+            mapBounds = new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
             InitializeTransitions();
+            InitializeGrids();
             base.Initialize();
         }
 
         private void InitializeTransitions()
         {
-            transitions = new Dictionary<Point, (GameState, Point)>();
+            int screenWidth = _graphics.PreferredBackBufferWidth;
+            int screenHeight = _graphics.PreferredBackBufferHeight;
 
-            // GreenForestCentre transitions
-            transitions[new Point(0, 29)] = (GameState.ForestTop, new Point(38, 29));
-            transitions[new Point(0, 30)] = (GameState.ForestTop, new Point(38, 30));
-            transitions[new Point(0, 31)] = (GameState.ForestTop, new Point(38, 31));
+            transitions = new List<(Rectangle, GameState, GameState)>
+            {
+                // GreenForestCentre to ForestTop (Expanded Edge)
+                (new Rectangle(0, 0, screenWidth, TileSize * 2), GameState.GreenForestCentre, GameState.ForestTop),
 
-            transitions[new Point(38, 29)] = (GameState.ForestButtom, new Point(0, 29));
-            transitions[new Point(38, 30)] = (GameState.ForestButtom, new Point(0, 30));
-            transitions[new Point(38, 31)] = (GameState.ForestButtom, new Point(0, 31));
+                // ForestTop to GreenForestCentre
+                (new Rectangle(0, screenHeight - (TileSize * 2), screenWidth, TileSize * 2), GameState.ForestTop, GameState.GreenForestCentre),
 
-            transitions[new Point(17, 0)] = (GameState.ForestLeft, new Point(17, 63));
-            transitions[new Point(18, 0)] = (GameState.ForestLeft, new Point(18, 63));
+                // GreenForestCentre to ForestButtom (Expanded Edge)
+                (new Rectangle(0, screenHeight - (TileSize * 2), screenWidth, TileSize * 2), GameState.GreenForestCentre, GameState.ForestButtom),
 
-            transitions[new Point(17, 63)] = (GameState.ForestRight, new Point(17, 0));
-            transitions[new Point(18, 63)] = (GameState.ForestRight, new Point(18, 0));
+                // ForestButtom to GreenForestCentre
+                (new Rectangle(0, 0, screenWidth, TileSize * 2), GameState.ForestButtom, GameState.GreenForestCentre),
 
-            // ForestTop transitions
-            transitions[new Point(38, 29)] = (GameState.GreenForestCentre, new Point(0, 29));
-            transitions[new Point(38, 30)] = (GameState.GreenForestCentre, new Point(0, 30));
-            transitions[new Point(38, 31)] = (GameState.GreenForestCentre, new Point(0, 31));
+                // GreenForestCentre to ForestLeft (Expanded Edge)
+                (new Rectangle(0, 0, TileSize * 2, screenHeight), GameState.GreenForestCentre, GameState.ForestLeft),
 
-            // ForestButtom transitions
-            transitions[new Point(0, 29)] = (GameState.GreenForestCentre, new Point(38, 29));
-            transitions[new Point(0, 30)] = (GameState.GreenForestCentre, new Point(38, 30));
-            transitions[new Point(0, 31)] = (GameState.GreenForestCentre, new Point(38, 31));
+                // ForestLeft to GreenForestCentre
+                (new Rectangle(screenWidth - (TileSize * 2), 0, TileSize * 2, screenHeight), GameState.ForestLeft, GameState.GreenForestCentre),
 
-            // ForestLeft transitions
-            transitions[new Point(17, 63)] = (GameState.GreenForestCentre, new Point(17, 0));
-            transitions[new Point(18, 63)] = (GameState.GreenForestCentre, new Point(18, 0));
+                // GreenForestCentre to ForestRight (Expanded Edge)
+                (new Rectangle(screenWidth - (TileSize * 2), 0, TileSize * 2, screenHeight), GameState.GreenForestCentre, GameState.ForestRight),
 
-            // ForestRight transitions
-            transitions[new Point(17, 0)] = (GameState.GreenForestCentre, new Point(17, 63));
-            transitions[new Point(18, 0)] = (GameState.GreenForestCentre, new Point(18, 63));
+                // ForestRight to GreenForestCentre
+                (new Rectangle(0, 0, TileSize * 2, screenHeight), GameState.ForestRight, GameState.GreenForestCentre)
+            };
+        }
+
+        private void InitializeGrids()
+        {
+            int gridWidth = _graphics.PreferredBackBufferWidth / TileSize;
+            int gridHeight = _graphics.PreferredBackBufferHeight / TileSize;
+
+            mapGrids = new Dictionary<GameState, int[,]>
+            {
+                { GameState.GreenForestCentre, new int[gridHeight, gridWidth] },
+                { GameState.ForestTop, new int[gridHeight, gridWidth] },
+                { GameState.ForestButtom, new int[gridHeight, gridWidth] },
+                { GameState.ForestLeft, new int[gridHeight, gridWidth] },
+                { GameState.ForestRight, new int[gridHeight, gridWidth] }
+            };
         }
 
         protected override void LoadContent()
@@ -127,34 +137,25 @@ namespace Survivor_of_the_Bulge
 
             if (currentState != GameState.MainMenu)
             {
-                Vector2 previousPosition = player.Position;
-                player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
+                Rectangle playerHitbox = new Rectangle((int)player.Position.X, (int)player.Position.Y, TileSize, TileSize);
 
-                Point gridPosition = new Point((int)(player.Position.Y / TileSize), (int)(player.Position.X / TileSize));
-
-                if (transitions.ContainsKey(gridPosition))
+                foreach (var transition in transitions)
                 {
-                    var (nextState, newGridPosition) = transitions[gridPosition];
-                    currentState = nextState;
-                    player.Position = new Vector2(newGridPosition.Y * TileSize, newGridPosition.X * TileSize);
+                    if (transition.transitionZone.Intersects(playerHitbox) && transition.fromState == currentState)
+                    {
+                        currentState = transition.toState;
+                        player.Position = new Vector2(
+                            _graphics.PreferredBackBufferWidth / 2,
+                            _graphics.PreferredBackBufferHeight / 2
+                        );
+                        break;
+                    }
                 }
+
+                player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
             }
 
             base.Update(gameTime);
-        }
-
-        private void DrawGridOverlay(int mapWidth, int mapHeight, float scaleX, float scaleY)
-        {
-            int scaledTileSize = (int)(TileSize * scaleX);
-
-            for (int y = 0; y <= mapHeight; y += scaledTileSize)
-            {
-                for (int x = 0; x <= mapWidth; x += scaledTileSize)
-                {
-                    _spriteBatch.Draw(gridLineTexture, new Rectangle(0, y, mapWidth, 1), Color.White * 0.3f);
-                    _spriteBatch.Draw(gridLineTexture, new Rectangle(x, 0, 1, mapHeight), Color.White * 0.3f);
-                }
-            }
         }
 
         protected override void Draw(GameTime gameTime)
@@ -163,54 +164,34 @@ namespace Survivor_of_the_Bulge
 
             _spriteBatch.Begin();
 
-            float scaleX = (float)_graphics.PreferredBackBufferWidth / mapBounds.Width;
-            float scaleY = (float)_graphics.PreferredBackBufferHeight / mapBounds.Height;
+            float scaleX = (float)_graphics.PreferredBackBufferWidth / greenForestBackground.Width;
+            float scaleY = (float)_graphics.PreferredBackBufferHeight / greenForestBackground.Height;
+            Vector2 scale = new Vector2(scaleX, scaleY);
 
-            switch (currentState)
+            Texture2D currentBackground = currentState switch
             {
-                case GameState.MainMenu:
-                    _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
-                    menuState.Draw(_spriteBatch);
-                    break;
+                GameState.GreenForestCentre => greenForestBackground,
+                GameState.ForestTop => forestTopBackground,
+                GameState.ForestButtom => forestButtomBackground,
+                GameState.ForestLeft => forestLeftBackground,
+                GameState.ForestRight => forestRightBackground,
+                _ => mainMenuBackground
+            };
 
-                case GameState.GreenForestCentre:
-                    _spriteBatch.Draw(greenForestBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
+            _spriteBatch.Draw(currentBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
 
-                case GameState.ForestTop:
-                    _spriteBatch.Draw(forestTopBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
-
-                case GameState.ForestButtom:
-                    _spriteBatch.Draw(forestButtomBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
-
-                case GameState.ForestLeft:
-                    _spriteBatch.Draw(forestLeftBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
-
-                case GameState.ForestRight:
-                    _spriteBatch.Draw(forestRightBackground, Vector2.Zero, null, Color.White, 0f, Vector2.Zero,
-                        new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
-                    DrawGridOverlay(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, scaleX, scaleY);
-                    player.Draw(_spriteBatch);
-                    break;
+            // Draw Grid Overlay
+            for (int y = 0; y < _graphics.PreferredBackBufferHeight; y += TileSize)
+            {
+                for (int x = 0; x < _graphics.PreferredBackBufferWidth; x += TileSize)
+                {
+                    _spriteBatch.Draw(gridLineTexture, new Rectangle(x, 0, 1, _graphics.PreferredBackBufferHeight), Color.White * 0.3f);
+                    _spriteBatch.Draw(gridLineTexture, new Rectangle(0, y, _graphics.PreferredBackBufferWidth, 1), Color.White * 0.3f);
+                }
             }
 
+            player.Draw(_spriteBatch);
             _spriteBatch.End();
-
             base.Draw(gameTime);
         }
     }
