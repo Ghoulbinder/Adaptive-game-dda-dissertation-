@@ -86,8 +86,7 @@ namespace Survivor_of_the_Bulge
 
             InitializeMaps();
 
-            // Dynamically adjust the window size to fit the largest map
-            var largestMap = maps[GameState.GreenForestCentre]; // Replace with logic to find the largest map
+            var largestMap = maps[GameState.GreenForestCentre];
             _graphics.PreferredBackBufferWidth = largestMap.Background.Width;
             _graphics.PreferredBackBufferHeight = largestMap.Background.Height;
             _graphics.ApplyChanges();
@@ -105,21 +104,68 @@ namespace Survivor_of_the_Bulge
                             new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
                                 Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
                                 Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"), // Mirror for right
                                 new Vector2(300, 300),
                                 Enemy.Direction.Up),
                             new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
                                 Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
                                 Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"), // Mirror for right
                                 new Vector2(600, 500),
                                 Enemy.Direction.Down)
                         })
                 },
-                { GameState.ForestTop, new Map(Content.Load<Texture2D>("Images/Maps/snowForestTop2"), new List<Enemy>()) },
-                { GameState.ForestButtom, new Map(Content.Load<Texture2D>("Images/Maps/snowForestButtom2"), new List<Enemy>()) },
-                { GameState.ForestLeft, new Map(Content.Load<Texture2D>("Images/Maps/snowForestLeft2"), new List<Enemy>()) },
-                { GameState.ForestRight, new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"), new List<Enemy>()) }
+                {
+                    GameState.ForestTop,
+                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestTop2"),
+                        new List<Enemy>
+                        {
+                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                                new Vector2(400, 200),
+                                Enemy.Direction.Left),
+                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                                new Vector2(700, 300),
+                                Enemy.Direction.Right)
+                        })
+                },
+                {
+                    GameState.ForestButtom,
+                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestButtom2"),
+                        new List<Enemy>
+                        {
+                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                                new Vector2(500, 700),
+                                Enemy.Direction.Up)
+                        })
+                },
+                {
+                    GameState.ForestLeft,
+                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestLeft2"),
+                        new List<Enemy>
+                        {
+                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                                new Vector2(300, 500),
+                                Enemy.Direction.Right)
+                        })
+                },
+                {
+                    GameState.ForestRight,
+                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"),
+                        new List<Enemy>
+                        {
+                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                                new Vector2(800, 400),
+                                Enemy.Direction.Left)
+                        })
+                }
             };
         }
 
@@ -138,7 +184,6 @@ namespace Survivor_of_the_Bulge
             {
                 var currentMap = maps[currentState];
 
-                // Handle map transitions
                 Rectangle playerHitbox = new Rectangle((int)player.Position.X, (int)player.Position.Y, TileSize, TileSize);
                 foreach (var transition in transitions)
                 {
@@ -168,27 +213,19 @@ namespace Survivor_of_the_Bulge
 
             if (currentState == GameState.MainMenu)
             {
-                // Draw the main menu background
                 _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
             }
             else
             {
-                // Get the current map
                 var currentMap = maps[currentState];
 
-                // Calculate the scale to fit height (980) while maintaining aspect ratio
                 float scale = (float)_graphics.PreferredBackBufferHeight / currentMap.Background.Height;
-
-                // Calculate the new width after scaling
                 float scaledWidth = currentMap.Background.Width * scale;
-
-                // Calculate X and Y offsets for centering the map
                 Vector2 position = new Vector2(
-                    (_graphics.PreferredBackBufferWidth - scaledWidth) / 2, // Center horizontally
-                    0 // Map will fit perfectly vertically
+                    (_graphics.PreferredBackBufferWidth - scaledWidth) / 2,
+                    0
                 );
 
-                // Draw the map background
                 _spriteBatch.Draw(
                     currentMap.Background,
                     position,
@@ -196,61 +233,18 @@ namespace Survivor_of_the_Bulge
                     Color.White,
                     0f,
                     Vector2.Zero,
-                    new Vector2(scale, scale), // Apply scaling to X and Y
+                    new Vector2(scale, scale),
                     SpriteEffects.None,
                     0f
                 );
 
-                // Draw enemies
                 currentMap.DrawEnemies(_spriteBatch);
             }
 
-            // Draw player
             player.Draw(_spriteBatch);
 
             _spriteBatch.End();
             base.Draw(gameTime);
-        }
-
-
-
-    }
-
-    public class Map
-    {
-        public Texture2D Background { get; }
-        private List<Enemy> Enemies;
-
-        public Map(Texture2D background, List<Enemy> enemies)
-        {
-            Background = background;
-            Enemies = enemies;
-        }
-
-        public void UpdateEnemies(GameTime gameTime, Viewport viewport)
-        {
-            foreach (var enemy in Enemies)
-                enemy.Update(gameTime, viewport);
-        }
-
-        public void DrawEnemies(SpriteBatch spriteBatch)
-        {
-            foreach (var enemy in Enemies)
-                enemy.Draw(spriteBatch);
-        }
-    }
-
-    public class Transition
-    {
-        public GameState From { get; }
-        public GameState To { get; }
-        public Rectangle Zone { get; }
-
-        public Transition(GameState from, GameState to, Rectangle zone)
-        {
-            From = from;
-            To = to;
-            Zone = zone;
         }
     }
 }

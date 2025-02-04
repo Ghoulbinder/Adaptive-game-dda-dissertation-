@@ -5,7 +5,7 @@ namespace Survivor_of_the_Bulge
 {
     public class Enemy
     {
-        private Texture2D backTexture, frontTexture, leftTexture, rightTexture;
+        private Texture2D backTexture, frontTexture, leftTexture;
         public Vector2 Position;
         private float speed = 100f;
         private Rectangle sourceRectangle;
@@ -19,12 +19,11 @@ namespace Survivor_of_the_Bulge
 
         public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, sourceRectangle.Width, sourceRectangle.Height);
 
-        public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D right, Vector2 startPosition, Direction startDirection)
+        public Enemy(Texture2D back, Texture2D front, Texture2D left, Vector2 startPosition, Direction startDirection)
         {
             backTexture = back;
             frontTexture = front;
             leftTexture = left;
-            rightTexture = right;
             Position = startPosition;
             currentDirection = startDirection;
 
@@ -94,8 +93,8 @@ namespace Survivor_of_the_Bulge
                     break;
 
                 case Direction.Right:
-                    currentTexture = rightTexture;
-                    spriteEffect = SpriteEffects.None;
+                    currentTexture = leftTexture; // Use left texture and flip it
+                    spriteEffect = SpriteEffects.FlipHorizontally;
                     break;
 
                 case Direction.Up:
