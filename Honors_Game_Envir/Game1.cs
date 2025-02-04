@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System.Threading.Tasks;
+
 
 namespace Survivor_of_the_Bulge
 {
@@ -32,6 +34,10 @@ namespace Survivor_of_the_Bulge
 
         private List<(Rectangle transitionZone, GameState fromState, GameState toState)> transitions;
         private Dictionary<GameState, int[,]> mapGrids;
+        private Texture2D enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyRightTexture;
+        private List<Enemy> enemies;
+
+        //private DeepSeekService aiService;
 
         public Game1()
         {
@@ -48,6 +54,7 @@ namespace Survivor_of_the_Bulge
         {
             currentState = GameState.MainMenu;
             mapBounds = new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+            //aiService = new DeepSeekService(); // ✅ Initialize AI service
             InitializeTransitions();
             InitializeGrids();
             base.Initialize();
@@ -109,6 +116,19 @@ namespace Survivor_of_the_Bulge
                 new Vector2(100, 100)
             );
 
+            // Load enemy textures
+            enemyBackTexture = Content.Load<Texture2D>("Images/Enemy/enemyBackWalking");
+            enemyFrontTexture = Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking");
+            enemyLeftTexture = Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking");
+            enemyRightTexture = enemyLeftTexture; // Mirror left texture for right direction
+
+            // Initialize enemies
+            enemies = new List<Enemy>
+            {
+                new Enemy(enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyRightTexture, new Vector2(500, 500)),
+                new Enemy(enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyRightTexture, new Vector2(300, 300))
+            };
+
             menuState = new MenuState(gameFont, mainMenuBackground);
         }
 
@@ -143,10 +163,17 @@ namespace Survivor_of_the_Bulge
                 }
 
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
+
+                // Update all enemies
+                foreach (var enemy in enemies)
+                {
+                    enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport);
+                }
             }
 
             base.Update(gameTime);
         }
+
 
         protected override void Draw(GameTime gameTime)
         {
@@ -184,8 +211,16 @@ namespace Survivor_of_the_Bulge
             }
 
             player.Draw(_spriteBatch);
+
+            // Draw all enemies
+            foreach (var enemy in enemies)
+            {
+                enemy.Draw(_spriteBatch);
+            }
+
             _spriteBatch.End();
             base.Draw(gameTime);
         }
+
     }
 }

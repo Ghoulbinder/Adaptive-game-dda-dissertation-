@@ -7,7 +7,6 @@ namespace Survivor_of_the_Bulge
     {
         private Texture2D backTexture, frontTexture, leftTexture;
         public Vector2 Position;
-        public Vector2 Movement; // New Movement vector to track player's movement direction
         private float speed = 200f;
 
         private Rectangle sourceRectangle;
@@ -16,10 +15,11 @@ namespace Survivor_of_the_Bulge
         private int currentFrame = 0;
         private int totalFrames = 4;
 
-        private enum Direction { Idle, Left, Right, Up, Down }
-        private Direction currentDirection = Direction.Idle;
+        private int frameWidth;  // Dynamic frame width
+        private int frameHeight; // Dynamic frame height
 
-        public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, sourceRectangle.Width, sourceRectangle.Height);
+        private enum Direction { Left, Right, Up, Down }
+        private Direction currentDirection = Direction.Down;
 
         public Player(Texture2D back, Texture2D front, Texture2D left, Vector2 startPosition)
         {
@@ -27,16 +27,17 @@ namespace Survivor_of_the_Bulge
             frontTexture = front;
             leftTexture = left;
             Position = startPosition;
-            sourceRectangle = new Rectangle(0, 0, left.Width / totalFrames, left.Height);
+
+            // Set default frame dimensions based on "down" direction (frontTexture)
+            frameWidth = frontTexture.Width / totalFrames;
+            frameHeight = frontTexture.Height;
+            sourceRectangle = new Rectangle(0, 0, frameWidth, frameHeight);
         }
 
         public void Update(GameTime gameTime, Viewport viewport)
         {
             Vector2 movement = Vector2.Zero;
             var keyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
-
-            // Reset direction to Idle
-            currentDirection = Direction.Idle;
 
             // Handle movement and direction
             if (keyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.W))
@@ -62,13 +63,11 @@ namespace Survivor_of_the_Bulge
 
             // Update position and clamp to screen bounds
             Position += movement;
-            Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - sourceRectangle.Width);
-            Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - sourceRectangle.Height);
+            Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - frameWidth);
+            Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - frameHeight);
 
-            Movement = movement; // Save the movement vector
-
-            // Update animation frame if moving
-            if (currentDirection != Direction.Idle)
+            // Update animation frame if the player is moving
+            if (movement != Vector2.Zero)
             {
                 timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (timer >= frameTime)
@@ -77,34 +76,64 @@ namespace Survivor_of_the_Bulge
                     timer = 0f;
                 }
             }
-            else
+
+            // Update frame dimensions based on the direction
+            switch (currentDirection)
             {
-                currentFrame = 0; // Reset animation frame for idle state
+                case Direction.Up:
+                    frameWidth = backTexture.Width / totalFrames;
+                    frameHeight = backTexture.Height;
+                    break;
+                case Direction.Down:
+                    frameWidth = frontTexture.Width / totalFrames;
+                    frameHeight = frontTexture.Height;
+                    break;
+                case Direction.Left:
+                case Direction.Right:
+                    frameWidth = leftTexture.Width / totalFrames;
+                    frameHeight = leftTexture.Height;
+                    break;
             }
 
             // Update source rectangle
-            sourceRectangle.X = currentFrame * sourceRectangle.Width;
+            sourceRectangle = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(frontTexture, Position, sourceRectangle, Color.White);
-        }
+            Texture2D currentTexture = frontTexture;
+            SpriteEffects spriteEffects = SpriteEffects.None;
 
-        public void ResolveCollision(Rectangle obstacleBounds)
-        {
-            // Prevent player from moving into obstacles
-            if (Bounds.Intersects(obstacleBounds))
+            // Determine texture and sprite effect
+            switch (currentDirection)
             {
-                if (Movement.X > 0) // Moving right
-                    Position.X = obstacleBounds.Left - Bounds.Width;
-                if (Movement.X < 0) // Moving left
-                    Position.X = obstacleBounds.Right;
-                if (Movement.Y > 0) // Moving down
-                    Position.Y = obstacleBounds.Top - Bounds.Height;
-                if (Movement.Y < 0) // Moving up
-                    Position.Y = obstacleBounds.Bottom;
+                case Direction.Left:
+                    currentTexture = leftTexture;
+                    break;
+                case Direction.Right:
+                    currentTexture = leftTexture;
+                    spriteEffects = SpriteEffects.FlipHorizontally;
+                    break;
+                case Direction.Up:
+                    currentTexture = backTexture;
+                    break;
+                case Direction.Down:
+                    currentTexture = frontTexture;
+                    break;
             }
+
+            // Draw the current frame
+            spriteBatch.Draw(
+                currentTexture,
+                Position,
+                sourceRectangle,
+                Color.White,
+                0f,
+                Vector2.Zero,
+                1f,
+                spriteEffects,
+                0f
+            );
         }
     }
 }
