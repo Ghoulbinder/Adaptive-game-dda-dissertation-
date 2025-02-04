@@ -134,6 +134,18 @@
 /processorParam:TextureFormat=Color
 /build:Images/Maps/greenForestCentre.png
 
+#begin Images/Maps/greenForestCentre2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Images/Maps/greenForestCentre2.png
+
 #begin Images/Maps/mmBackground.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -145,6 +157,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Images/Maps/mmBackground.png
+
+#begin Images/Maps/mmBackground2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Images/Maps/mmBackground2.png
 
 #begin Images/Maps/playButton.png
 /importer:TextureImporter
@@ -182,6 +206,18 @@
 /processorParam:TextureFormat=Color
 /build:Images/Maps/snowForestButtom.png
 
+#begin Images/Maps/snowForestButtom2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Images/Maps/snowForestButtom2.png
+
 #begin Images/Maps/snowForestLeft.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -193,6 +229,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Images/Maps/snowForestLeft.png
+
+#begin Images/Maps/snowForestLeft2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Images/Maps/snowForestLeft2.png
 
 #begin Images/Maps/snowForestRight.png
 /importer:TextureImporter
@@ -206,6 +254,18 @@
 /processorParam:TextureFormat=Color
 /build:Images/Maps/snowForestRight.png
 
+#begin Images/Maps/snowForestRight2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Images/Maps/snowForestRight2.png
+
 #begin Images/Maps/snowForestTop.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -217,6 +277,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Images/Maps/snowForestTop.png
+
+#begin Images/Maps/snowForestTop2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Images/Maps/snowForestTop2.png
 
 #begin Images/Maps/tinyleaf.png
 /importer:TextureImporter
