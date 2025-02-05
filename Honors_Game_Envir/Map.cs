@@ -15,11 +15,11 @@ namespace Survivor_of_the_Bulge
             Enemies = enemies;
         }
 
-        public void UpdateEnemies(GameTime gameTime, Viewport viewport)
+        public void UpdateEnemies(GameTime gameTime, Viewport viewport, Vector2 playerPosition)
         {
             foreach (var enemy in Enemies)
             {
-                enemy.Update(gameTime, viewport);
+                enemy.Update(gameTime, viewport, playerPosition); // Pass player position
             }
         }
 

@@ -22,7 +22,7 @@ namespace Survivor_of_the_Bulge
         private SpriteBatch _spriteBatch;
 
         private Player player;
-        private PlayerStats playerStats; // PlayerStats instance
+        private PlayerStats playerStats;
         private GameState currentState;
 
         private Texture2D mainMenuBackground;
@@ -32,7 +32,7 @@ namespace Survivor_of_the_Bulge
         private const int TileSize = 25;
 
         private bool showGrid = false;
-        private bool showStats = false; // To toggle the display of stats
+        private bool showStats = false;
         private KeyboardState previousKeyboardState;
 
         private List<Transition> transitions;
@@ -79,11 +79,9 @@ namespace Survivor_of_the_Bulge
             mainMenuBackground = Content.Load<Texture2D>("Images/Maps/mmBackground2");
             gameFont = Content.Load<SpriteFont>("Fonts/jungleFont");
 
-            // Load bullet textures
             Texture2D bulletHorizontalTexture = Content.Load<Texture2D>("Images/Projectile/bullet");
             Texture2D bulletVerticalTexture = Content.Load<Texture2D>("Images/Projectile/bullet2");
 
-            // Initialize the player
             player = new Player(
                 Content.Load<Texture2D>("Images/Soldier/backWalking"),
                 Content.Load<Texture2D>("Images/Soldier/frontWalking"),
@@ -93,9 +91,7 @@ namespace Survivor_of_the_Bulge
                 new Vector2(100, 100)
             );
 
-            // Initialize the PlayerStats
             playerStats = new PlayerStats(100, 50, 10, 0, 1, gameFont);
-
             menuState = new MenuState(gameFont, mainMenuBackground);
 
             InitializeMaps();
@@ -108,102 +104,95 @@ namespace Survivor_of_the_Bulge
 
         private void InitializeMaps()
         {
+            Texture2D enemyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/bullet");
+            Texture2D enemyBulletVertical = Content.Load<Texture2D>("Images/Projectile/bullet2");
+
             maps = new Dictionary<GameState, Map>
-            {
+    {
+        {
+            GameState.GreenForestCentre,
+            new Map(Content.Load<Texture2D>("Images/Maps/greenForestCentre2"),
+                new List<Enemy>
                 {
-                    GameState.GreenForestCentre,
-                    new Map(Content.Load<Texture2D>("Images/Maps/greenForestCentre2"),
-                        new List<Enemy>
-                        {
-                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                new Vector2(300, 300),
-                                Enemy.Direction.Up),
-                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                new Vector2(600, 500),
-                                Enemy.Direction.Down)
-                        })
-                },
+                    new Enemy(
+                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                        enemyBulletHorizontal,
+                        enemyBulletVertical,
+                        new Vector2(300, 300),
+                        Enemy.Direction.Up),
+                    new Enemy(
+                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                        enemyBulletHorizontal,
+                        enemyBulletVertical,
+                        new Vector2(600, 500),
+                        Enemy.Direction.Down)
+                })
+        },
+        {
+            GameState.ForestTop,
+            new Map(Content.Load<Texture2D>("Images/Maps/snowForestTop2"),
+                new List<Enemy>
                 {
-                    GameState.ForestTop,
-                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestTop2"),
-                        new List<Enemy>
-                        {
-                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                new Vector2(400, 200),
-                                Enemy.Direction.Left),
-                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                new Vector2(700, 300),
-                                Enemy.Direction.Right)
-                        })
-                },
-                {
-                    GameState.ForestButtom,
-                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestButtom2"),
-                        new List<Enemy>
-                        {
-                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                new Vector2(500, 700),
-                                Enemy.Direction.Up)
-                        })
-                },
-                {
-                    GameState.ForestLeft,
-                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestLeft2"),
-                        new List<Enemy>
-                        {
-                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                new Vector2(300, 500),
-                                Enemy.Direction.Right)
-                        })
-                },
-                {
-                    GameState.ForestRight,
-                    new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"),
-                        new List<Enemy>
-                        {
-                            new Enemy(Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                new Vector2(800, 400),
-                                Enemy.Direction.Left)
-                        })
-                }
-            };
+                    new Enemy(
+                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                        enemyBulletHorizontal,
+                        enemyBulletVertical,
+                        new Vector2(400, 200),
+                        Enemy.Direction.Left),
+                    new Enemy(
+                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                        enemyBulletHorizontal,
+                        enemyBulletVertical,
+                        new Vector2(700, 300),
+                        Enemy.Direction.Right)
+                })
+        },
+        {
+            GameState.ForestButtom,
+            new Map(Content.Load<Texture2D>("Images/Maps/snowForestButtom2"),
+                new List<Enemy>())
+        },
+        {
+            GameState.ForestLeft,
+            new Map(Content.Load<Texture2D>("Images/Maps/snowForestLeft2"),
+                new List<Enemy>())
+        },
+        {
+            GameState.ForestRight,
+            new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"),
+                new List<Enemy>())
         }
+    };
+        }
+
+
+
+
 
         protected override void Update(GameTime gameTime)
         {
             var currentKeyboardState = Keyboard.GetState();
 
-            // Exit game
             if (currentKeyboardState.IsKeyDown(Keys.Escape))
                 Exit();
 
-            // Toggle grid with G
             if (currentKeyboardState.IsKeyDown(Keys.G) && previousKeyboardState.IsKeyUp(Keys.G))
                 showGrid = !showGrid;
 
-            // Toggle stats with Tab
             if (currentKeyboardState.IsKeyDown(Keys.Tab) && previousKeyboardState.IsKeyUp(Keys.Tab))
                 showStats = !showStats;
 
-            // Start the game from the main menu
             if (currentState == GameState.MainMenu && currentKeyboardState.IsKeyDown(Keys.Enter))
                 currentState = GameState.GreenForestCentre;
 
-            // Game state logic
             if (currentState != GameState.MainMenu)
             {
                 var currentMap = maps[currentState];
@@ -223,7 +212,7 @@ namespace Survivor_of_the_Bulge
                 }
 
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
-                currentMap.UpdateEnemies(gameTime, _graphics.GraphicsDevice.Viewport);
+                currentMap.UpdateEnemies(gameTime, _graphics.GraphicsDevice.Viewport, player.Position);
             }
 
             previousKeyboardState = currentKeyboardState;
@@ -236,7 +225,6 @@ namespace Survivor_of_the_Bulge
 
             _spriteBatch.Begin();
 
-            // Draw the main menu or game content
             if (currentState == GameState.MainMenu)
             {
                 _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
@@ -267,13 +255,11 @@ namespace Survivor_of_the_Bulge
                 currentMap.DrawEnemies(_spriteBatch);
             }
 
-            // Draw the player
             player.Draw(_spriteBatch);
 
-            // Draw stats if Tab is pressed
             if (showStats)
             {
-                playerStats.Draw(_spriteBatch, new Vector2(20, 20)); // Position at top-left corner
+                playerStats.Draw(_spriteBatch, new Vector2(20, 20));
             }
 
             _spriteBatch.End();
