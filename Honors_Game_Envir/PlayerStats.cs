@@ -37,7 +37,7 @@ namespace Survivor_of_the_Bulge
         public void Draw(SpriteBatch spriteBatch, Vector2 position)
         {
             string statsText = $"Health: {Health}\nStamina: {Stamina}\nStrength: {Strength}\nLevel: {Level}\nXP: {Experience}";
-            spriteBatch.DrawString(font, statsText, position, Color.White);
+            spriteBatch.DrawString(font, statsText, position, Color.Black);
         }
     }
 }

@@ -1,12 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System.Collections.Generic;
 
 namespace Survivor_of_the_Bulge
 {
     public class Player
     {
-        private Texture2D backTexture, frontTexture, leftTexture;
+        private Texture2D backTexture, frontTexture, leftTexture, bulletHorizontalTexture, bulletVerticalTexture;
         public Vector2 Position;
         private float speed = 200f;
 
@@ -22,22 +23,24 @@ namespace Survivor_of_the_Bulge
         private enum Direction { Left, Right, Up, Down }
         private Direction currentDirection = Direction.Down;
 
-        public PlayerStats Stats { get; private set; }
-        private bool showStats = false; // Toggle for showing stats
+        private List<Bullet> bullets;
+        private float bulletSpeed = 500f;
 
-        public Player(Texture2D back, Texture2D front, Texture2D left, Vector2 startPosition, SpriteFont statFont)
+        public Player(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontalTexture, Texture2D bulletVerticalTexture, Vector2 startPosition)
         {
             backTexture = back;
             frontTexture = front;
             leftTexture = left;
             Position = startPosition;
+            this.bulletHorizontalTexture = bulletHorizontalTexture;
+            this.bulletVerticalTexture = bulletVerticalTexture;
 
             frameWidth = frontTexture.Width / totalFrames;
             frameHeight = frontTexture.Height;
+
             sourceRectangle = new Rectangle(0, 0, frameWidth, frameHeight);
 
-            // Initialize stats with default values
-            Stats = new PlayerStats(100, 100, 10, 0, 1, statFont);
+            bullets = new List<Bullet>();
         }
 
         public void Update(GameTime gameTime, Viewport viewport)
@@ -45,39 +48,30 @@ namespace Survivor_of_the_Bulge
             Vector2 movement = Vector2.Zero;
             var keyboardState = Keyboard.GetState();
 
-            // Toggle stats page with 'TAB'
-            if (keyboardState.IsKeyDown(Keys.Tab))
+            if (keyboardState.IsKeyDown(Keys.W))
             {
-                showStats = !showStats;
+                movement.Y -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                currentDirection = Direction.Up;
+            }
+            else if (keyboardState.IsKeyDown(Keys.S))
+            {
+                movement.Y += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                currentDirection = Direction.Down;
+            }
+            else if (keyboardState.IsKeyDown(Keys.A))
+            {
+                movement.X -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                currentDirection = Direction.Left;
+            }
+            else if (keyboardState.IsKeyDown(Keys.D))
+            {
+                movement.X += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                currentDirection = Direction.Right;
             }
 
-            if (!showStats)  // Prevent movement when stats page is open
-            {
-                if (keyboardState.IsKeyDown(Keys.W))
-                {
-                    movement.Y -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    currentDirection = Direction.Up;
-                }
-                else if (keyboardState.IsKeyDown(Keys.S))
-                {
-                    movement.Y += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    currentDirection = Direction.Down;
-                }
-                else if (keyboardState.IsKeyDown(Keys.A))
-                {
-                    movement.X -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    currentDirection = Direction.Left;
-                }
-                else if (keyboardState.IsKeyDown(Keys.D))
-                {
-                    movement.X += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    currentDirection = Direction.Right;
-                }
-
-                Position += movement;
-                Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - frameWidth);
-                Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - frameHeight);
-            }
+            Position += movement;
+            Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - frameWidth);
+            Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - frameHeight);
 
             if (movement != Vector2.Zero)
             {
@@ -89,6 +83,26 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
+            UpdateFrameDimensions();
+
+            if (keyboardState.IsKeyDown(Keys.Space))
+            {
+                Shoot();
+            }
+
+            for (int i = 0; i < bullets.Count; i++)
+            {
+                bullets[i].Update(gameTime);
+                if (!bullets[i].IsActive)
+                {
+                    bullets.RemoveAt(i);
+                    i--;
+                }
+            }
+        }
+
+        private void UpdateFrameDimensions()
+        {
             switch (currentDirection)
             {
                 case Direction.Up:
@@ -107,6 +121,39 @@ namespace Survivor_of_the_Bulge
             }
 
             sourceRectangle = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
+        }
+
+        private void Shoot()
+        {
+            Vector2 bulletDirection = Vector2.Zero;
+            Texture2D bulletTexture = bulletHorizontalTexture;
+            SpriteEffects spriteEffects = SpriteEffects.None;
+
+            switch (currentDirection)
+            {
+                case Direction.Up:
+                    bulletDirection = new Vector2(0, -1);
+                    bulletTexture = bulletVerticalTexture;
+                    break;
+                case Direction.Down:
+                    bulletDirection = new Vector2(0, 1);
+                    bulletTexture = bulletVerticalTexture;
+                    spriteEffects = SpriteEffects.FlipVertically;
+                    break;
+                case Direction.Left:
+                    bulletDirection = new Vector2(-1, 0);
+                    bulletTexture = bulletHorizontalTexture;
+                    spriteEffects = SpriteEffects.FlipHorizontally;
+                    break;
+                case Direction.Right:
+                    bulletDirection = new Vector2(1, 0);
+                    bulletTexture = bulletHorizontalTexture;
+                    break;
+            }
+
+            float chestOffset = frameHeight / 2f; // Adjust bullet height to chest level
+            Vector2 bulletPosition = Position + new Vector2(frameWidth / 2, chestOffset);
+            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, spriteEffects));
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -131,22 +178,11 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            spriteBatch.Draw(
-                currentTexture,
-                Position,
-                sourceRectangle,
-                Color.White,
-                0f,
-                Vector2.Zero,
-                1f,
-                spriteEffects,
-                0f
-            );
+            spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
 
-            // Draw stats if toggled
-            if (showStats)
+            foreach (var bullet in bullets)
             {
-                Stats.Draw(spriteBatch, new Vector2(Position.X + 50, Position.Y - 100));
+                bullet.Draw(spriteBatch);
             }
         }
     }

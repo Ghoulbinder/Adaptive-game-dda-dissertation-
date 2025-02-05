@@ -22,6 +22,7 @@ namespace Survivor_of_the_Bulge
         private SpriteBatch _spriteBatch;
 
         private Player player;
+        private PlayerStats playerStats; // PlayerStats instance
         private GameState currentState;
 
         private Texture2D mainMenuBackground;
@@ -31,6 +32,8 @@ namespace Survivor_of_the_Bulge
         private const int TileSize = 25;
 
         private bool showGrid = false;
+        private bool showStats = false; // To toggle the display of stats
+        private KeyboardState previousKeyboardState;
 
         private List<Transition> transitions;
         private Dictionary<GameState, Map> maps;
@@ -51,6 +54,7 @@ namespace Survivor_of_the_Bulge
             currentState = GameState.MainMenu;
 
             InitializeTransitions();
+            previousKeyboardState = Keyboard.GetState();
             base.Initialize();
         }
 
@@ -75,13 +79,22 @@ namespace Survivor_of_the_Bulge
             mainMenuBackground = Content.Load<Texture2D>("Images/Maps/mmBackground2");
             gameFont = Content.Load<SpriteFont>("Fonts/jungleFont");
 
+            // Load bullet textures
+            Texture2D bulletHorizontalTexture = Content.Load<Texture2D>("Images/Projectile/bullet");
+            Texture2D bulletVerticalTexture = Content.Load<Texture2D>("Images/Projectile/bullet2");
+
+            // Initialize the player
             player = new Player(
                 Content.Load<Texture2D>("Images/Soldier/backWalking"),
                 Content.Load<Texture2D>("Images/Soldier/frontWalking"),
                 Content.Load<Texture2D>("Images/Soldier/leftWalking"),
-                new Vector2(100, 100),
-                gameFont // Pass the font for stats
+                bulletHorizontalTexture,
+                bulletVerticalTexture,
+                new Vector2(100, 100)
             );
+
+            // Initialize the PlayerStats
+            playerStats = new PlayerStats(100, 50, 10, 0, 1, gameFont);
 
             menuState = new MenuState(gameFont, mainMenuBackground);
 
@@ -172,15 +185,25 @@ namespace Survivor_of_the_Bulge
 
         protected override void Update(GameTime gameTime)
         {
-            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
+            var currentKeyboardState = Keyboard.GetState();
+
+            // Exit game
+            if (currentKeyboardState.IsKeyDown(Keys.Escape))
                 Exit();
 
-            if (Keyboard.GetState().IsKeyDown(Keys.G))
+            // Toggle grid with G
+            if (currentKeyboardState.IsKeyDown(Keys.G) && previousKeyboardState.IsKeyUp(Keys.G))
                 showGrid = !showGrid;
 
-            if (Keyboard.GetState().IsKeyDown(Keys.Enter) && currentState == GameState.MainMenu)
+            // Toggle stats with Tab
+            if (currentKeyboardState.IsKeyDown(Keys.Tab) && previousKeyboardState.IsKeyUp(Keys.Tab))
+                showStats = !showStats;
+
+            // Start the game from the main menu
+            if (currentState == GameState.MainMenu && currentKeyboardState.IsKeyDown(Keys.Enter))
                 currentState = GameState.GreenForestCentre;
 
+            // Game state logic
             if (currentState != GameState.MainMenu)
             {
                 var currentMap = maps[currentState];
@@ -203,6 +226,7 @@ namespace Survivor_of_the_Bulge
                 currentMap.UpdateEnemies(gameTime, _graphics.GraphicsDevice.Viewport);
             }
 
+            previousKeyboardState = currentKeyboardState;
             base.Update(gameTime);
         }
 
@@ -212,6 +236,7 @@ namespace Survivor_of_the_Bulge
 
             _spriteBatch.Begin();
 
+            // Draw the main menu or game content
             if (currentState == GameState.MainMenu)
             {
                 _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
@@ -242,7 +267,14 @@ namespace Survivor_of_the_Bulge
                 currentMap.DrawEnemies(_spriteBatch);
             }
 
+            // Draw the player
             player.Draw(_spriteBatch);
+
+            // Draw stats if Tab is pressed
+            if (showStats)
+            {
+                playerStats.Draw(_spriteBatch, new Vector2(20, 20)); // Position at top-left corner
+            }
 
             _spriteBatch.End();
             base.Draw(gameTime);
