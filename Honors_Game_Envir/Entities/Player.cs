@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace Survivor_of_the_Bulge
 {
@@ -15,58 +16,69 @@ namespace Survivor_of_the_Bulge
         private int currentFrame = 0;
         private int totalFrames = 4;
 
-        private int frameWidth;  // Dynamic frame width
-        private int frameHeight; // Dynamic frame height
+        private int frameWidth;
+        private int frameHeight;
 
         private enum Direction { Left, Right, Up, Down }
         private Direction currentDirection = Direction.Down;
 
-        public Player(Texture2D back, Texture2D front, Texture2D left, Vector2 startPosition)
+        public PlayerStats Stats { get; private set; }
+        private bool showStats = false; // Toggle for showing stats
+
+        public Player(Texture2D back, Texture2D front, Texture2D left, Vector2 startPosition, SpriteFont statFont)
         {
             backTexture = back;
             frontTexture = front;
             leftTexture = left;
             Position = startPosition;
 
-            // Set default frame dimensions based on "down" direction (frontTexture)
             frameWidth = frontTexture.Width / totalFrames;
             frameHeight = frontTexture.Height;
             sourceRectangle = new Rectangle(0, 0, frameWidth, frameHeight);
+
+            // Initialize stats with default values
+            Stats = new PlayerStats(100, 100, 10, 0, 1, statFont);
         }
 
         public void Update(GameTime gameTime, Viewport viewport)
         {
             Vector2 movement = Vector2.Zero;
-            var keyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+            var keyboardState = Keyboard.GetState();
 
-            // Handle movement and direction
-            if (keyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.W))
+            // Toggle stats page with 'TAB'
+            if (keyboardState.IsKeyDown(Keys.Tab))
             {
-                movement.Y -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                currentDirection = Direction.Up;
-            }
-            else if (keyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.S))
-            {
-                movement.Y += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                currentDirection = Direction.Down;
-            }
-            else if (keyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.A))
-            {
-                movement.X -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                currentDirection = Direction.Left;
-            }
-            else if (keyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.D))
-            {
-                movement.X += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                currentDirection = Direction.Right;
+                showStats = !showStats;
             }
 
-            // Update position and clamp to screen bounds
-            Position += movement;
-            Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - frameWidth);
-            Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - frameHeight);
+            if (!showStats)  // Prevent movement when stats page is open
+            {
+                if (keyboardState.IsKeyDown(Keys.W))
+                {
+                    movement.Y -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    currentDirection = Direction.Up;
+                }
+                else if (keyboardState.IsKeyDown(Keys.S))
+                {
+                    movement.Y += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    currentDirection = Direction.Down;
+                }
+                else if (keyboardState.IsKeyDown(Keys.A))
+                {
+                    movement.X -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    currentDirection = Direction.Left;
+                }
+                else if (keyboardState.IsKeyDown(Keys.D))
+                {
+                    movement.X += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    currentDirection = Direction.Right;
+                }
 
-            // Update animation frame if the player is moving
+                Position += movement;
+                Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - frameWidth);
+                Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - frameHeight);
+            }
+
             if (movement != Vector2.Zero)
             {
                 timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -77,7 +89,6 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            // Update frame dimensions based on the direction
             switch (currentDirection)
             {
                 case Direction.Up:
@@ -95,7 +106,6 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            // Update source rectangle
             sourceRectangle = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
         }
 
@@ -104,7 +114,6 @@ namespace Survivor_of_the_Bulge
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
 
-            // Determine texture and sprite effect
             switch (currentDirection)
             {
                 case Direction.Left:
@@ -122,7 +131,6 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            // Draw the current frame
             spriteBatch.Draw(
                 currentTexture,
                 Position,
@@ -134,6 +142,12 @@ namespace Survivor_of_the_Bulge
                 spriteEffects,
                 0f
             );
+
+            // Draw stats if toggled
+            if (showStats)
+            {
+                Stats.Draw(spriteBatch, new Vector2(Position.X + 50, Position.Y - 100));
+            }
         }
     }
 }

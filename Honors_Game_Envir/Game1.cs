@@ -79,7 +79,8 @@ namespace Survivor_of_the_Bulge
                 Content.Load<Texture2D>("Images/Soldier/backWalking"),
                 Content.Load<Texture2D>("Images/Soldier/frontWalking"),
                 Content.Load<Texture2D>("Images/Soldier/leftWalking"),
-                new Vector2(100, 100)
+                new Vector2(100, 100),
+                gameFont // Pass the font for stats
             );
 
             menuState = new MenuState(gameFont, mainMenuBackground);
