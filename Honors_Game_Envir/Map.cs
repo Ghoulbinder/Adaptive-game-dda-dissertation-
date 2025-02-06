@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Survivor_of_the_Bulge
 {
@@ -17,7 +17,7 @@ namespace Survivor_of_the_Bulge
             Enemies = enemies;
         }
 
-        // NEW: A helper method to easily add an enemy to this map.
+        // Helper method to add an enemy to this map.
         public void AddEnemy(Enemy enemy)
         {
             Enemies.Add(enemy);

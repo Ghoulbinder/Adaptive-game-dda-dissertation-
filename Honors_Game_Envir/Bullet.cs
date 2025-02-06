@@ -26,14 +26,12 @@ namespace Survivor_of_the_Bulge
             this.damage = damage;
             isActive = true;
             this.spriteEffects = spriteEffects;
-
             sourceRectangle = new Rectangle(0, 0, texture.Width, texture.Height);
         }
 
         public void Update(GameTime gameTime)
         {
             Position += direction * speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-
             if (Position.X < 0 || Position.X > 1600 || Position.Y < 0 || Position.Y > 980)
             {
                 Deactivate();

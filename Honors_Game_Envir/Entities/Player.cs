@@ -11,24 +11,19 @@ namespace Survivor_of_the_Bulge
         public Vector2 Position;
         private float speed = 200f;
         private int health = 100;
-        private int bulletDamage = 10; // Player bullet damage
-
+        private int bulletDamage = 10;
         private Rectangle sourceRectangle;
-        private float frameTime = 0.1f;  // Time per frame for animation
-        private float timer = 0f;        // Timer to track animation progress
+        private float frameTime = 0.1f;
+        private float timer = 0f;
         private int currentFrame = 0;
-        private int totalFrames = 4;     // Total frames in the sprite sheet
-
+        private int totalFrames = 4;
         private int frameWidth;
         private int frameHeight;
-
         private enum Direction { Left, Right, Up, Down }
         private Direction currentDirection = Direction.Down;
-
         private List<Bullet> bullets;
         private float bulletSpeed = 500f;
 
-        // Property to get the player's collision bounds
         public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, frameWidth, frameHeight);
 
         public Player(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontalTexture, Texture2D bulletVerticalTexture, Vector2 startPosition)
@@ -39,14 +34,9 @@ namespace Survivor_of_the_Bulge
             Position = startPosition;
             this.bulletHorizontalTexture = bulletHorizontalTexture;
             this.bulletVerticalTexture = bulletVerticalTexture;
-
-            // Calculate frame dimensions based on the front texture (assuming all directions have similar dimensions)
             frameWidth = frontTexture.Width / totalFrames;
             frameHeight = frontTexture.Height;
-
-            // Initialize the source rectangle to display the first frame
             sourceRectangle = new Rectangle(0, 0, frameWidth, frameHeight);
-
             bullets = new List<Bullet>();
         }
 
@@ -55,7 +45,6 @@ namespace Survivor_of_the_Bulge
             Vector2 movement = Vector2.Zero;
             var keyboardState = Keyboard.GetState();
 
-            // Handle movement input and set the current direction
             if (keyboardState.IsKeyDown(Keys.W))
             {
                 movement.Y -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -77,32 +66,26 @@ namespace Survivor_of_the_Bulge
                 currentDirection = Direction.Right;
             }
 
-            // Update the player's position based on movement
             Position += movement;
-            // Clamp position so the player doesn't go off-screen
             Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - frameWidth);
             Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - frameHeight);
 
-            // Update the animation if the player is moving
             if (movement != Vector2.Zero)
             {
                 timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (timer >= frameTime)
                 {
-                    currentFrame = (currentFrame + 1) % totalFrames; // Loop to the next frame
+                    currentFrame = (currentFrame + 1) % totalFrames;
                     timer = 0f;
                 }
             }
-            // *** FIX: Update the source rectangle for the current frame and direction ***
             UpdateFrameDimensions();
 
-            // Handle shooting input
             if (keyboardState.IsKeyDown(Keys.Space))
             {
                 Shoot();
             }
 
-            // Update each bullet and check for collision with enemies
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -111,12 +94,10 @@ namespace Survivor_of_the_Bulge
                     if (bullet.IsActive && enemy.Bounds.Intersects(new Rectangle((int)bullet.Position.X, (int)bullet.Position.Y, 10, 10)))
                     {
                         enemy.TakeDamage(bullet.Damage);
-                        bullet.Deactivate(); // Deactivate the bullet after it hits
+                        bullet.Deactivate();
                     }
                 }
             }
-
-            // Remove bullets that are no longer active
             bullets.RemoveAll(b => !b.IsActive);
         }
 
@@ -135,7 +116,6 @@ namespace Survivor_of_the_Bulge
             Texture2D bulletTexture = bulletHorizontalTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
 
-            // Determine bullet direction and adjust texture/sprite effects based on current direction
             switch (currentDirection)
             {
                 case Direction.Up:
@@ -158,7 +138,6 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            // Calculate the bullet's starting position (roughly from the player's chest)
             float chestOffset = frameHeight / 2f;
             Vector2 bulletPosition = Position + new Vector2(frameWidth / 2, chestOffset);
             bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, bulletDamage, spriteEffects));
@@ -169,7 +148,6 @@ namespace Survivor_of_the_Bulge
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
 
-            // Select the correct texture based on the current direction
             switch (currentDirection)
             {
                 case Direction.Left:
@@ -187,20 +165,15 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            // Draw the player's current animation frame
             spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
-
-            // Draw all active bullets
             foreach (var bullet in bullets)
             {
                 bullet.Draw(spriteBatch);
             }
         }
 
-        // *** FIX: Update the frame dimensions and source rectangle so only one frame is drawn ***
         private void UpdateFrameDimensions()
         {
-            // Choose the texture and calculate frame dimensions based on current direction
             switch (currentDirection)
             {
                 case Direction.Up:
@@ -217,7 +190,6 @@ namespace Survivor_of_the_Bulge
                     frameHeight = leftTexture.Height;
                     break;
             }
-            // Set the source rectangle to the current frame
             sourceRectangle = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
         }
     }

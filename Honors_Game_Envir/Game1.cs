@@ -38,7 +38,7 @@ namespace Survivor_of_the_Bulge
         private List<Transition> transitions;
         private Dictionary<GameState, Map> maps;
 
-        // NEW: Random generator for spawning enemies with random positions.
+        // Random generator for spawning enemies.
         private Random random = new Random();
 
         public Game1()
@@ -98,14 +98,14 @@ namespace Survivor_of_the_Bulge
 
             InitializeMaps();
 
-            // Set the viewport size based on the largest map's background dimensions.
+            // Set the viewport size based on the largest map's background.
             var largestMap = maps[GameState.GreenForestCentre];
             _graphics.PreferredBackBufferWidth = largestMap.Background.Width;
             _graphics.PreferredBackBufferHeight = largestMap.Background.Height;
             _graphics.ApplyChanges();
         }
 
-        // NEW: Function to spawn a specified number of enemies on a given map at random positions.
+        // NEW: Function to spawn a specified number of enemies for a given map at random, non-overlapping positions.
         private void SpawnEnemiesForMap(
             Map map,
             int enemyCount,
@@ -116,21 +116,45 @@ namespace Survivor_of_the_Bulge
             Texture2D enemyBulletVertical)
         {
             int totalFrames = 4; // Assumed number of frames in the enemy spritesheet.
-            int enemyWidth = enemyLeftTexture.Width / totalFrames; // Calculate a single frame's width.
+            int enemyWidth = enemyLeftTexture.Width / totalFrames; // Width of one animation frame.
             int enemyHeight = enemyLeftTexture.Height;             // Enemy sprite height.
 
             for (int i = 0; i < enemyCount; i++)
             {
-                // Generate a random x position within the background bounds.
-                int x = random.Next(0, Math.Max(1, map.Background.Width - enemyWidth));
-                // Generate a random y position within the background bounds.
-                int y = random.Next(0, Math.Max(1, map.Background.Height - enemyHeight));
+                bool validPosition = false;
+                int attempts = 0;
+                int x = 0, y = 0;
+                int maxAttempts = 50; // Maximum attempts to find a non-overlapping spawn location.
 
-                // Choose a random starting direction for the enemy.
+                while (!validPosition && attempts < maxAttempts)
+                {
+                    x = random.Next(0, Math.Max(1, map.Background.Width - enemyWidth));
+                    y = random.Next(0, Math.Max(1, map.Background.Height - enemyHeight));
+                    Rectangle candidate = new Rectangle(x, y, enemyWidth, enemyHeight);
+
+                    validPosition = true;
+                    foreach (Enemy existingEnemy in map.Enemies)
+                    {
+                        if (candidate.Intersects(existingEnemy.Bounds))
+                        {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+
+                // Choose a random starting direction.
                 Array directions = Enum.GetValues(typeof(Enemy.Direction));
                 Enemy.Direction randomDirection = (Enemy.Direction)directions.GetValue(random.Next(directions.Length));
 
-                // Create a new enemy instance with default health and bullet damage.
+                // Use the DifficultyManager multipliers to adjust base enemy health and damage.
+                int baseHealth = 50;
+                int baseDamage = 5;
+
+                int enemyHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
+                int enemyDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
+
                 Enemy enemy = new Enemy(
                     enemyBackTexture,
                     enemyFrontTexture,
@@ -139,10 +163,9 @@ namespace Survivor_of_the_Bulge
                     enemyBulletVertical,
                     new Vector2(x, y),
                     randomDirection,
-                    50,   // Default Health (adjust as needed)
-                    5     // Default Bullet Damage (adjust as needed)
+                    enemyHealth,
+                    enemyDamage
                 );
-                // Add the newly created enemy to the map.
                 map.AddEnemy(enemy);
             }
         }
@@ -168,10 +191,9 @@ namespace Survivor_of_the_Bulge
                 { GameState.ForestRight, new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"), new List<Enemy>()) }
             };
 
-            // Specify the desired number of enemies per map.
-            int enemyCountPerMap = 20; // Change this value (e.g., to 20) to spawn more enemies.
+            // Use the difficulty manager’s BaseEnemyCount for each map.
+            int enemyCountPerMap = DifficultyManager.Instance.BaseEnemyCount;
 
-            // Spawn enemies for each map using the helper function.
             SpawnEnemiesForMap(maps[GameState.GreenForestCentre], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
             SpawnEnemiesForMap(maps[GameState.ForestTop], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
             SpawnEnemiesForMap(maps[GameState.ForestLeft], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
@@ -192,7 +214,7 @@ namespace Survivor_of_the_Bulge
             if (currentKeyboardState.IsKeyDown(Keys.Tab) && previousKeyboardState.IsKeyUp(Keys.Tab))
                 showStats = !showStats;
 
-            // Transition from main menu to game on Enter key press.
+            // Transition from main menu to game on Enter.
             if (currentState == GameState.MainMenu && currentKeyboardState.IsKeyDown(Keys.Enter))
                 currentState = GameState.GreenForestCentre;
 
@@ -200,16 +222,16 @@ namespace Survivor_of_the_Bulge
             {
                 var currentMap = maps[currentState];
 
-                // Update the player (pass the current map’s enemy list for collision checking).
+                // Update the player (passing current map’s enemy list for collision checking).
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
 
-                // Update each enemy in the current map.
+                // Update each enemy.
                 foreach (var enemy in currentMap.Enemies)
                 {
                     enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport, player.Position, player);
                 }
 
-                // Check for transitions between maps based on the player's position.
+                // Check for transitions between maps.
                 foreach (var transition in transitions)
                 {
                     if (transition.From == currentState && transition.Zone.Intersects(player.Bounds))
@@ -287,7 +309,7 @@ namespace Survivor_of_the_Bulge
 
         private void DrawDebugStats()
         {
-            string debugText = $"Current State: {currentState}\nPlayer Position: {player.Position}";
+            string debugText = $"Current State: {currentState}\nPlayer Position: {player.Position}\nDifficulty Level: {DifficultyManager.Instance.Level}";
             _spriteBatch.DrawString(gameFont, debugText, new Vector2(10, 100), Color.White);
         }
     }
