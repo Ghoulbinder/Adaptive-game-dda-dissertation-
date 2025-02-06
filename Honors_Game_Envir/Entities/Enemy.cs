@@ -24,13 +24,22 @@ namespace Survivor_of_the_Bulge
         private float shootingTimer;
         private bool isDead = false;
 
+        // Added constant for extra collision padding.
+        private const int CollisionPadding = 5;
+
+        // Use a slightly larger rectangle for collision detection.
+        public Rectangle Bounds => new Rectangle(
+            (int)Position.X - CollisionPadding,
+            (int)Position.Y - CollisionPadding,
+            sourceRectangle.Width + 2 * CollisionPadding,
+            sourceRectangle.Height + 2 * CollisionPadding);
+
+        public bool IsDead => isDead;
+
         public enum EnemyState { Idle, Patrol, Chase, Shoot, Flee, Dead }
         public enum Direction { Left, Right, Up, Down }
 
         private Direction currentDirection;
-
-        public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, sourceRectangle.Width, sourceRectangle.Height);
-        public bool IsDead => isDead;
 
         public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical, Vector2 startPosition, Direction startDirection, int health, int bulletDamage)
         {
@@ -43,6 +52,7 @@ namespace Survivor_of_the_Bulge
             currentDirection = startDirection;
             this.health = Math.Max(1, health);
             this.bulletDamage = Math.Max(1, bulletDamage);
+
             speed = 100f;
             bulletSpeed = 300f;
             frameTime = 0.1f;
@@ -97,7 +107,7 @@ namespace Survivor_of_the_Bulge
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
-                if (bullet.IsActive && player.Bounds.Intersects(new Rectangle((int)bullet.Position.X, (int)bullet.Position.Y, 10, 10)))
+                if (bullet.IsActive && player.Bounds.Intersects(bullet.Bounds))
                 {
                     player.TakeDamage(bullet.Damage);
                     bullet.Deactivate();
@@ -126,16 +136,14 @@ namespace Survivor_of_the_Bulge
 
         private void Patrol(Viewport viewport)
         {
-            // Adjust speed using the difficulty multiplier.
-            float adjustedSpeed = speed * DifficultyManager.Instance.EnemySpeedMultiplier;
             if (currentDirection == Direction.Left)
             {
-                Position.X -= adjustedSpeed * 0.02f;
+                Position.X -= speed * 0.02f;
                 if (Position.X <= 0) currentDirection = Direction.Right;
             }
             else if (currentDirection == Direction.Right)
             {
-                Position.X += adjustedSpeed * 0.02f;
+                Position.X += speed * 0.02f;
                 if (Position.X >= viewport.Width - sourceRectangle.Width) currentDirection = Direction.Left;
             }
         }
@@ -154,8 +162,7 @@ namespace Survivor_of_the_Bulge
                 currentDirection = moveDirection.Y < 0 ? Direction.Up : Direction.Down;
             }
 
-            float adjustedSpeed = speed * DifficultyManager.Instance.EnemySpeedMultiplier;
-            Position += moveDirection * adjustedSpeed * 0.02f;
+            Position += moveDirection * speed * 0.02f;
         }
 
         private void Flee(Vector2 playerPosition)
@@ -172,8 +179,7 @@ namespace Survivor_of_the_Bulge
                 currentDirection = moveDirection.Y < 0 ? Direction.Up : Direction.Down;
             }
 
-            float adjustedSpeed = speed * DifficultyManager.Instance.EnemySpeedMultiplier;
-            Position += moveDirection * adjustedSpeed * 0.02f;
+            Position += moveDirection * speed * 0.02f;
         }
 
         private void Shoot()
@@ -208,6 +214,31 @@ namespace Survivor_of_the_Bulge
             bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, bulletDamage, spriteEffect));
         }
 
+        private void UpdateFrameDimensions()
+        {
+            int textureWidth = 0;
+            int textureHeight = 0;
+            switch (currentDirection)
+            {
+                case Direction.Up:
+                    textureWidth = backTexture.Width;
+                    textureHeight = backTexture.Height;
+                    break;
+                case Direction.Down:
+                    textureWidth = frontTexture.Width;
+                    textureHeight = frontTexture.Height;
+                    break;
+                case Direction.Left:
+                case Direction.Right:
+                    textureWidth = leftTexture.Width;
+                    textureHeight = leftTexture.Height;
+                    break;
+            }
+            int frameW = textureWidth / totalFrames;
+            int frameH = textureHeight;
+            sourceRectangle = new Rectangle(currentFrame * frameW, 0, frameW, frameH);
+        }
+
         public void Draw(SpriteBatch spriteBatch)
         {
             if (isDead) return;
@@ -233,35 +264,8 @@ namespace Survivor_of_the_Bulge
             }
 
             spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
-
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
-        }
-
-        private void UpdateFrameDimensions()
-        {
-            int textureWidth = 0;
-            int textureHeight = 0;
-
-            switch (currentDirection)
-            {
-                case Direction.Up:
-                    textureWidth = backTexture.Width;
-                    textureHeight = backTexture.Height;
-                    break;
-                case Direction.Down:
-                    textureWidth = frontTexture.Width;
-                    textureHeight = frontTexture.Height;
-                    break;
-                case Direction.Left:
-                case Direction.Right:
-                    textureWidth = leftTexture.Width;
-                    textureHeight = leftTexture.Height;
-                    break;
-            }
-            int frameW = textureWidth / totalFrames;
-            int frameH = textureHeight;
-            sourceRectangle = new Rectangle(currentFrame * frameW, 0, frameW, frameH);
         }
     }
 }

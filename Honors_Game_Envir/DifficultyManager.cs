@@ -17,7 +17,7 @@ namespace Survivor_of_the_Bulge
         public int Level { get; private set; } = 1;
 
         // Base parameters that are adjusted as difficulty increases.
-        public int BaseEnemyCount { get; private set; } = 2;
+        public int BaseEnemyCount { get; private set; } = 20;
         public float EnemyHealthMultiplier { get; private set; } = 1f;
         public float EnemySpeedMultiplier { get; private set; } = 1f;
         public float EnemyDamageMultiplier { get; private set; } = 1f;
