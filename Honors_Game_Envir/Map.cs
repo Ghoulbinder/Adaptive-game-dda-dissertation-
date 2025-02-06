@@ -6,8 +6,10 @@ namespace Survivor_of_the_Bulge
 {
     public class Map
     {
+        // The background texture for the map.
         public Texture2D Background { get; }
-        public List<Enemy> Enemies { get; } // ✅ Fixed: Now public
+        // A public, modifiable list of enemies on this map.
+        public List<Enemy> Enemies { get; }
 
         public Map(Texture2D background, List<Enemy> enemies)
         {
@@ -15,6 +17,13 @@ namespace Survivor_of_the_Bulge
             Enemies = enemies;
         }
 
+        // NEW: A helper method to easily add an enemy to this map.
+        public void AddEnemy(Enemy enemy)
+        {
+            Enemies.Add(enemy);
+        }
+
+        // Draws all enemies that are part of this map.
         public void DrawEnemies(SpriteBatch spriteBatch)
         {
             foreach (var enemy in Enemies)
