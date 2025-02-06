@@ -10,6 +10,8 @@ namespace Survivor_of_the_Bulge
         private Texture2D backTexture, frontTexture, leftTexture, bulletHorizontalTexture, bulletVerticalTexture;
         public Vector2 Position;
         private float speed = 200f;
+        private int health = 100;
+        private int bulletDamage = 10; // Player bullet damage
 
         private Rectangle sourceRectangle;
         private float frameTime = 0.1f;
@@ -25,6 +27,8 @@ namespace Survivor_of_the_Bulge
 
         private List<Bullet> bullets;
         private float bulletSpeed = 500f;
+
+        public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, frameWidth, frameHeight);
 
         public Player(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontalTexture, Texture2D bulletVerticalTexture, Vector2 startPosition)
         {
@@ -43,10 +47,12 @@ namespace Survivor_of_the_Bulge
             bullets = new List<Bullet>();
         }
 
-        public void Update(GameTime gameTime, Viewport viewport)
+        public void Update(GameTime gameTime, Viewport viewport, List<Enemy> enemies)
         {
             Vector2 movement = Vector2.Zero;
             var keyboardState = Keyboard.GetState();
+
+
 
             if (keyboardState.IsKeyDown(Keys.W))
             {
@@ -83,44 +89,37 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            UpdateFrameDimensions();
-
             if (keyboardState.IsKeyDown(Keys.Space))
             {
                 Shoot();
             }
 
-            for (int i = 0; i < bullets.Count; i++)
+            foreach (var bullet in bullets)
             {
-                bullets[i].Update(gameTime);
-                if (!bullets[i].IsActive)
+                bullet.Update(gameTime);
+
+                // Check collision with enemies
+                foreach (var enemy in enemies)
                 {
-                    bullets.RemoveAt(i);
-                    i--;
+                    if (bullet.IsActive && enemy.Bounds.Intersects(new Rectangle((int)bullet.Position.X, (int)bullet.Position.Y, 10, 10)))
+                    {
+                        enemy.TakeDamage(bullet.Damage);
+                        bullet.Deactivate(); // ✅ Fixed: Now deactivates the bullet properly
+                    }
                 }
             }
+
+
+            bullets.RemoveAll(b => !b.IsActive);
         }
 
-        private void UpdateFrameDimensions()
+        public void TakeDamage(int amount)
         {
-            switch (currentDirection)
+            health -= amount;
+            if (health <= 0)
             {
-                case Direction.Up:
-                    frameWidth = backTexture.Width / totalFrames;
-                    frameHeight = backTexture.Height;
-                    break;
-                case Direction.Down:
-                    frameWidth = frontTexture.Width / totalFrames;
-                    frameHeight = frontTexture.Height;
-                    break;
-                case Direction.Left:
-                case Direction.Right:
-                    frameWidth = leftTexture.Width / totalFrames;
-                    frameHeight = leftTexture.Height;
-                    break;
+                // Handle player death (respawn or game over)
             }
-
-            sourceRectangle = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
         }
 
         private void Shoot()
@@ -151,9 +150,9 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            float chestOffset = frameHeight / 2f; // Adjust bullet height to chest level
+            float chestOffset = frameHeight / 2f;
             Vector2 bulletPosition = Position + new Vector2(frameWidth / 2, chestOffset);
-            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, spriteEffects));
+            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, bulletDamage, spriteEffects));
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -185,5 +184,28 @@ namespace Survivor_of_the_Bulge
                 bullet.Draw(spriteBatch);
             }
         }
+
+        private void UpdateFrameDimensions()
+        {
+            switch (currentDirection)
+            {
+                case Direction.Up:
+                    frameWidth = backTexture.Width / totalFrames;
+                    frameHeight = backTexture.Height;
+                    break;
+                case Direction.Down:
+                    frameWidth = frontTexture.Width / totalFrames;
+                    frameHeight = frontTexture.Height;
+                    break;
+                case Direction.Left:
+                case Direction.Right:
+                    frameWidth = leftTexture.Width / totalFrames;
+                    frameHeight = leftTexture.Height;
+                    break;
+            }
+
+            sourceRectangle = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
+        }
+
     }
 }

@@ -9,24 +9,30 @@ namespace Survivor_of_the_Bulge
     {
         private Texture2D backTexture, frontTexture, leftTexture, bulletHorizontalTexture, bulletVerticalTexture;
         public Vector2 Position;
-        private float speed = 100f;
+        private float speed;
+        private int health;
+        private int bulletDamage;
         private Rectangle sourceRectangle;
-        private float frameTime = 0.1f;
-        private float timer = 0f;
-        private int currentFrame = 0;
-        private int totalFrames = 4;
+        private float frameTime;
+        private float timer;
+        private int currentFrame;
+        private int totalFrames;
         private List<Bullet> bullets;
-        private float bulletSpeed = 300f;
+        private float bulletSpeed;
         private EnemyState currentState;
-        private float shootingCooldown = 2f;
-        private float shootingTimer = 0f;
+        private float shootingCooldown;
+        private float shootingTimer;
+        private bool isDead = false; // ✅ Enemy death tracking
 
-        public enum EnemyState { Idle, Patrol, Chase, Shoot, Flee }
+        public enum EnemyState { Idle, Patrol, Chase, Shoot, Flee, Dead }
         public enum Direction { Left, Right, Up, Down }
 
-        private Direction currentDirection = Direction.Left;
+        private Direction currentDirection;
 
-        public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical, Vector2 startPosition, Direction startDirection)
+        public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, sourceRectangle.Width, sourceRectangle.Height);
+        public bool IsDead => isDead; // ✅ Public property to check if enemy is dead
+
+        public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical, Vector2 startPosition, Direction startDirection, int health, int bulletDamage)
         {
             backTexture = back;
             frontTexture = front;
@@ -35,13 +41,27 @@ namespace Survivor_of_the_Bulge
             bulletVerticalTexture = bulletVertical;
             Position = startPosition;
             currentDirection = startDirection;
+            this.health = Math.Max(1, health); // ✅ Prevents zero or negative health
+            this.bulletDamage = Math.Max(1, bulletDamage); // ✅ Prevents zero or negative damage
+
+            speed = 100f;
+            bulletSpeed = 300f;
+            frameTime = 0.1f;
+            shootingCooldown = 2f;
+            shootingTimer = 0f;
+            currentFrame = 0;
+
+            totalFrames = Math.Max(1, left.Width / Math.Max(1, left.Height)); // ✅ Prevents divide by zero
+
             sourceRectangle = new Rectangle(0, 0, left.Width / totalFrames, left.Height);
             bullets = new List<Bullet>();
             currentState = EnemyState.Patrol;
         }
 
-        public void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition)
+        public void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
+            if (isDead) return; // ✅ If enemy is dead, stop updating
+
             float distanceToPlayer = Vector2.Distance(Position, playerPosition);
 
             switch (currentState)
@@ -74,22 +94,35 @@ namespace Survivor_of_the_Bulge
                     Flee(playerPosition);
                     if (distanceToPlayer > 450) currentState = EnemyState.Patrol;
                     break;
+
+                case EnemyState.Dead:
+                    isDead = true;
+                    return;
             }
 
             foreach (var bullet in bullets)
+            {
                 bullet.Update(gameTime);
 
-            bullets.RemoveAll(b => !b.IsActive);
-
-            // Update animation
-            timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (timer >= frameTime)
-            {
-                currentFrame = (currentFrame + 1) % totalFrames;
-                timer = 0f;
+                // Check collision with player
+                if (bullet.IsActive && player.Bounds.Intersects(new Rectangle((int)bullet.Position.X, (int)bullet.Position.Y, 10, 10)))
+                {
+                    player.TakeDamage(bullet.Damage);
+                    bullet.Deactivate(); // ✅ Properly deactivates bullets
+                }
             }
 
-            UpdateSourceRectangle();
+            bullets.RemoveAll(b => !b.IsActive);
+        }
+
+        public void TakeDamage(int amount)
+        {
+            health -= amount;
+            if (health <= 0)
+            {
+                isDead = true;
+                currentState = EnemyState.Dead; // ✅ Enemy enters Dead state
+            }
         }
 
         private void Patrol(Viewport viewport)
@@ -110,32 +143,12 @@ namespace Survivor_of_the_Bulge
         {
             Vector2 moveDirection = Vector2.Normalize(playerPosition - Position);
             Position += moveDirection * speed * 0.02f;
-
-            // Update enemy direction to match movement
-            if (Math.Abs(moveDirection.X) > Math.Abs(moveDirection.Y))
-            {
-                currentDirection = (moveDirection.X > 0) ? Direction.Right : Direction.Left;
-            }
-            else
-            {
-                currentDirection = (moveDirection.Y > 0) ? Direction.Down : Direction.Up;
-            }
         }
 
         private void Flee(Vector2 playerPosition)
         {
             Vector2 moveDirection = Vector2.Normalize(Position - playerPosition);
             Position += moveDirection * speed * 0.02f;
-
-            // Update direction while fleeing
-            if (Math.Abs(moveDirection.X) > Math.Abs(moveDirection.Y))
-            {
-                currentDirection = (moveDirection.X > 0) ? Direction.Right : Direction.Left;
-            }
-            else
-            {
-                currentDirection = (moveDirection.Y > 0) ? Direction.Down : Direction.Up;
-            }
         }
 
         private void Shoot()
@@ -167,28 +180,13 @@ namespace Survivor_of_the_Bulge
             }
 
             Vector2 bulletPosition = Position + new Vector2(sourceRectangle.Width / 2, sourceRectangle.Height / 2);
-            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, spriteEffect));
-        }
-
-        private void UpdateSourceRectangle()
-        {
-            switch (currentDirection)
-            {
-                case Direction.Up:
-                    sourceRectangle = new Rectangle(currentFrame * backTexture.Width / totalFrames, 0, backTexture.Width / totalFrames, backTexture.Height);
-                    break;
-                case Direction.Down:
-                    sourceRectangle = new Rectangle(currentFrame * frontTexture.Width / totalFrames, 0, frontTexture.Width / totalFrames, frontTexture.Height);
-                    break;
-                case Direction.Left:
-                case Direction.Right:
-                    sourceRectangle = new Rectangle(currentFrame * leftTexture.Width / totalFrames, 0, leftTexture.Width / totalFrames, leftTexture.Height);
-                    break;
-            }
+            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, bulletDamage, spriteEffect));
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
+            if (isDead) return; // ✅ Don't draw if enemy is dead
+
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
 
@@ -213,6 +211,18 @@ namespace Survivor_of_the_Bulge
 
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
+        }
+        private void UpdateFrame()
+        {
+            timer += frameTime;
+
+            if (timer >= frameTime)
+            {
+                currentFrame = (currentFrame + 1) % totalFrames; // Loop through frames
+                timer = 0f;
+            }
+
+            sourceRectangle = new Rectangle(currentFrame * (frontTexture.Width / totalFrames), 0, frontTexture.Width / totalFrames, frontTexture.Height);
         }
     }
 }

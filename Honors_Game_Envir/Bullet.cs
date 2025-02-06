@@ -8,19 +8,22 @@ namespace Survivor_of_the_Bulge
         public Vector2 Position { get; private set; }
         private Vector2 direction;
         private float speed;
+        private int damage;
         private Texture2D texture;
         private Rectangle sourceRectangle;
         private bool isActive;
         private SpriteEffects spriteEffects;
 
         public bool IsActive => isActive;
+        public int Damage => damage;
 
-        public Bullet(Texture2D texture, Vector2 startPosition, Vector2 direction, float speed, SpriteEffects spriteEffects)
+        public Bullet(Texture2D texture, Vector2 startPosition, Vector2 direction, float speed, int damage, SpriteEffects spriteEffects)
         {
             this.texture = texture;
             Position = startPosition;
             this.direction = direction;
             this.speed = speed;
+            this.damage = damage;
             isActive = true;
             this.spriteEffects = spriteEffects;
 
@@ -33,8 +36,13 @@ namespace Survivor_of_the_Bulge
 
             if (Position.X < 0 || Position.X > 1600 || Position.Y < 0 || Position.Y > 980)
             {
-                isActive = false;
+                Deactivate();
             }
+        }
+
+        public void Deactivate()
+        {
+            isActive = false;
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -45,5 +53,4 @@ namespace Survivor_of_the_Bulge
             }
         }
     }
-
 }

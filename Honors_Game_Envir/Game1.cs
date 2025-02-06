@@ -121,15 +121,10 @@ namespace Survivor_of_the_Bulge
                         enemyBulletHorizontal,
                         enemyBulletVertical,
                         new Vector2(300, 300),
-                        Enemy.Direction.Up),
-                    new Enemy(
-                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                        enemyBulletHorizontal,
-                        enemyBulletVertical,
-                        new Vector2(600, 500),
-                        Enemy.Direction.Down)
+                        Enemy.Direction.Up,
+                        50,
+                        5
+                    )
                 })
         },
         {
@@ -144,37 +139,68 @@ namespace Survivor_of_the_Bulge
                         enemyBulletHorizontal,
                         enemyBulletVertical,
                         new Vector2(400, 200),
-                        Enemy.Direction.Left),
+                        Enemy.Direction.Left,
+                        70,
+                        10
+                    )
+                })
+        },
+        {
+            GameState.ForestLeft, // ✅ Fix: Ensure this exists
+            new Map(Content.Load<Texture2D>("Images/Maps/snowForestLeft2"),
+                new List<Enemy>
+                {
                     new Enemy(
                         Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
                         Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
                         Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
                         enemyBulletHorizontal,
                         enemyBulletVertical,
-                        new Vector2(700, 300),
-                        Enemy.Direction.Right)
+                        new Vector2(250, 350),
+                        Enemy.Direction.Right,
+                        60,
+                        8
+                    )
                 })
         },
         {
-            GameState.ForestButtom,
+            GameState.ForestButtom, // ✅ Added missing map
             new Map(Content.Load<Texture2D>("Images/Maps/snowForestButtom2"),
-                new List<Enemy>())
+                new List<Enemy>
+                {
+                    new Enemy(
+                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                        enemyBulletHorizontal,
+                        enemyBulletVertical,
+                        new Vector2(350, 400),
+                        Enemy.Direction.Down,
+                        55,
+                        7
+                    )
+                })
         },
         {
-            GameState.ForestLeft,
-            new Map(Content.Load<Texture2D>("Images/Maps/snowForestLeft2"),
-                new List<Enemy>())
-        },
-        {
-            GameState.ForestRight,
+            GameState.ForestRight, // ✅ Added missing map
             new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"),
-                new List<Enemy>())
+                new List<Enemy>
+                {
+                    new Enemy(
+                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                        enemyBulletHorizontal,
+                        enemyBulletVertical,
+                        new Vector2(500, 300),
+                        Enemy.Direction.Left,
+                        65,
+                        9
+                    )
+                })
         }
     };
         }
-
-
-
 
 
         protected override void Update(GameTime gameTime)
@@ -197,27 +223,32 @@ namespace Survivor_of_the_Bulge
             {
                 var currentMap = maps[currentState];
 
-                Rectangle playerHitbox = new Rectangle((int)player.Position.X, (int)player.Position.Y, TileSize, TileSize);
+                player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
+
+                foreach (var enemy in currentMap.Enemies)
+                {
+                    enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport, player.Position, player);
+                }
+
                 foreach (var transition in transitions)
                 {
-                    if (transition.From == currentState && transition.Zone.Intersects(playerHitbox))
+                    if (transition.From == currentState && transition.Zone.Intersects(player.Bounds))
                     {
-                        currentState = transition.To;
-                        player.Position = new Vector2(
-                            _graphics.PreferredBackBufferWidth / 2,
-                            _graphics.PreferredBackBufferHeight / 2
-                        );
+                        if (maps.ContainsKey(transition.To)) // ✅ Fix: Ensure map exists before switching
+                        {
+                            currentState = transition.To;
+                            player.Position = new Vector2(100, 100);
+                        }
                         break;
                     }
                 }
-
-                player.Update(gameTime, _graphics.GraphicsDevice.Viewport);
-                currentMap.UpdateEnemies(gameTime, _graphics.GraphicsDevice.Viewport, player.Position);
             }
 
             previousKeyboardState = currentKeyboardState;
             base.Update(gameTime);
         }
+
+
 
         protected override void Draw(GameTime gameTime)
         {
@@ -227,43 +258,67 @@ namespace Survivor_of_the_Bulge
 
             if (currentState == GameState.MainMenu)
             {
+                // Draw the main menu background
                 _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
+
+                // Draw menu state (e.g., menu options)
+                menuState.Draw(_spriteBatch);
             }
             else
             {
+                // Draw the current map's background
                 var currentMap = maps[currentState];
+                _spriteBatch.Draw(currentMap.Background, Vector2.Zero, Color.White);
 
-                float scale = (float)_graphics.PreferredBackBufferHeight / currentMap.Background.Height;
-                float scaledWidth = currentMap.Background.Width * scale;
-                Vector2 position = new Vector2(
-                    (_graphics.PreferredBackBufferWidth - scaledWidth) / 2,
-                    0
-                );
+                // Draw the player
+                player.Draw(_spriteBatch);
 
-                _spriteBatch.Draw(
-                    currentMap.Background,
-                    position,
-                    null,
-                    Color.White,
-                    0f,
-                    Vector2.Zero,
-                    new Vector2(scale, scale),
-                    SpriteEffects.None,
-                    0f
-                );
+                // Draw all enemies
+                foreach (var enemy in currentMap.Enemies)
+                {
+                    enemy.Draw(_spriteBatch);
+                }
 
-                currentMap.DrawEnemies(_spriteBatch);
-            }
+                // Draw player stats in the top-left corner
+                playerStats.Draw(_spriteBatch, new Vector2(10, 10));
 
-            player.Draw(_spriteBatch);
+                // Optionally draw a grid for debugging purposes
+                if (showGrid)
+                {
+                    DrawGrid();
+                }
 
-            if (showStats)
-            {
-                playerStats.Draw(_spriteBatch, new Vector2(20, 20));
+                // Show debugging stats or additional information if toggled
+                if (showStats)
+                {
+                    DrawDebugStats();
+                }
             }
 
             _spriteBatch.End();
+
             base.Draw(gameTime);
         }
+        private void DrawGrid()
+        {
+            Texture2D gridTexture = new Texture2D(GraphicsDevice, 1, 1);
+            gridTexture.SetData(new[] { Color.Gray });
+
+            for (int x = 0; x < _graphics.PreferredBackBufferWidth; x += TileSize)
+            {
+                _spriteBatch.Draw(gridTexture, new Rectangle(x, 0, 1, _graphics.PreferredBackBufferHeight), Color.Gray);
+            }
+
+            for (int y = 0; y < _graphics.PreferredBackBufferHeight; y += TileSize)
+            {
+                _spriteBatch.Draw(gridTexture, new Rectangle(0, y, _graphics.PreferredBackBufferWidth, 1), Color.Gray);
+            }
+        }
+        private void DrawDebugStats()
+        {
+            string debugText = $"Current State: {currentState}\nPlayer Position: {player.Position}";
+            _spriteBatch.DrawString(gameFont, debugText, new Vector2(10, 100), Color.White);
+        }
+
     }
 }

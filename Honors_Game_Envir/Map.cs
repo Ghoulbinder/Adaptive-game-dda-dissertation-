@@ -1,26 +1,18 @@
 ﻿using System.Collections.Generic;
-using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 
 namespace Survivor_of_the_Bulge
 {
     public class Map
     {
         public Texture2D Background { get; }
-        private List<Enemy> Enemies;
+        public List<Enemy> Enemies { get; } // ✅ Fixed: Now public
 
         public Map(Texture2D background, List<Enemy> enemies)
         {
             Background = background;
             Enemies = enemies;
-        }
-
-        public void UpdateEnemies(GameTime gameTime, Viewport viewport, Vector2 playerPosition)
-        {
-            foreach (var enemy in Enemies)
-            {
-                enemy.Update(gameTime, viewport, playerPosition); // Pass player position
-            }
         }
 
         public void DrawEnemies(SpriteBatch spriteBatch)
