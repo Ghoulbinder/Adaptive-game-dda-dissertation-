@@ -38,7 +38,7 @@ namespace Survivor_of_the_Bulge
         private List<Transition> transitions;
         private Dictionary<GameState, Map> maps;
 
-        // NEW: Lists for weather effects.
+        // Weather effects.
         private List<FallingLeaf> fallingLeaves;
         private List<SnowFlake> snowFlakes;
         private Random random = new Random();
@@ -86,6 +86,7 @@ namespace Survivor_of_the_Bulge
             Texture2D bulletHorizontalTexture = Content.Load<Texture2D>("Images/Projectile/bullet");
             Texture2D bulletVerticalTexture = Content.Load<Texture2D>("Images/Projectile/bullet2");
 
+            // Create the player with modular parameters (default values can later be adjusted by a DDA tool)
             player = new Player(
                 Content.Load<Texture2D>("Images/Soldier/backWalking"),
                 Content.Load<Texture2D>("Images/Soldier/frontWalking"),
@@ -95,22 +96,23 @@ namespace Survivor_of_the_Bulge
                 new Vector2(100, 100)
             );
 
+            // Initialize the player stats.
             playerStats = new PlayerStats(100, 50, 10, 0, 1, gameFont);
             menuState = new MenuState(gameFont, mainMenuBackground);
 
             InitializeMaps();
 
-            // Set the viewport size based on the largest map's background.
+            // Adjust viewport based on the largest map's background.
             var largestMap = maps[GameState.GreenForestCentre];
             _graphics.PreferredBackBufferWidth = largestMap.Background.Width;
             _graphics.PreferredBackBufferHeight = largestMap.Background.Height;
             _graphics.ApplyChanges();
 
-            // NEW: Load weather textures and create falling particles.
+            // Load weather textures and create falling particles.
             Texture2D leafTexture = Content.Load<Texture2D>("Images/Maps/tinyleaf");
             Texture2D snowTexture = Content.Load<Texture2D>("Images/Maps/snowFlake");
 
-            int particleCount = 20; // Adjust the number as needed.
+            int particleCount = 20;
             fallingLeaves = new List<FallingLeaf>();
             snowFlakes = new List<SnowFlake>();
 
@@ -121,7 +123,6 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        // NEW: Function to spawn enemies with non-overlapping random positions.
         private void SpawnEnemiesForMap(
             Map map,
             int enemyCount,
@@ -230,19 +231,24 @@ namespace Survivor_of_the_Bulge
             {
                 var currentMap = maps[currentState];
 
+                // Update player and update UI stats.
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
+                playerStats.UpdateHealth(player.Health);
 
+                // Update each enemy.
                 foreach (var enemy in currentMap.Enemies)
                 {
                     enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport, player.Position, player);
                 }
+                currentMap.Enemies.RemoveAll(e => e.IsDead);
 
-                // Update falling leaves and snow.
+                // Update weather effects.
                 foreach (var leaf in fallingLeaves)
                     leaf.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
                 foreach (var snow in snowFlakes)
                     snow.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
 
+                // Process map transitions.
                 foreach (var transition in transitions)
                 {
                     if (transition.From == currentState && transition.Zone.Intersects(player.Bounds))
@@ -281,7 +287,7 @@ namespace Survivor_of_the_Bulge
                 var currentMap = maps[currentState];
                 _spriteBatch.Draw(currentMap.Background, Vector2.Zero, Color.White);
 
-                // Draw weather effects (falling snow and leaves) on top of the background.
+                // Draw weather effects.
                 foreach (var snow in snowFlakes)
                     snow.Draw(_spriteBatch);
                 foreach (var leaf in fallingLeaves)

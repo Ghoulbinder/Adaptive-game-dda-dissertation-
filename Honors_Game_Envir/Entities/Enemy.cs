@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+//Enemy not charging towards player
 
 namespace Survivor_of_the_Bulge
 {
@@ -9,12 +11,27 @@ namespace Survivor_of_the_Bulge
     {
         private Texture2D backTexture, frontTexture, leftTexture, bulletHorizontalTexture, bulletVerticalTexture;
         public Vector2 Position;
-        private float speed;
-        private int health;
-        private int bulletDamage;
+
+        // Modular enemy parameters.
+        public float MovementSpeed { get; set; } = 100f;
+        public int Health { get; private set; }
+        public int BulletDamage { get; set; } = 5;
+        public float FiringInterval { get; set; } = 2f;  // Seconds between enemy shots
+        public float BulletRange { get; set; } = 400f;
+        public int CollisionDamage { get; set; } = 15;       // Damage when enemy collides with player
+        public float CollisionDamageInterval { get; set; } = 1f; // Apply collision damage once per second
+
+        // NEW: Charge state multiplier (increases speed when charging)
+        public float ChargeMultiplier { get; set; } = 2.0f;
+        // NEW: Distance threshold to switch into Charge state.
+        public float ChargeDistanceThreshold { get; set; } = 100f;
+
+        private float timeSinceLastShot = 0f;
+        private float collisionDamageTimer = 0f;
+
         private Rectangle sourceRectangle;
-        private float frameTime;  // Time per frame for animation
-        private float timer;      // Timer for animation
+        private float frameTime = 0.1f;
+        private float timer = 0f;
         private int currentFrame;
         private int totalFrames = 4;
         private List<Bullet> bullets;
@@ -24,10 +41,8 @@ namespace Survivor_of_the_Bulge
         private float shootingTimer;
         private bool isDead = false;
 
-        // Added constant for extra collision padding.
+        // Extra collision padding.
         private const int CollisionPadding = 5;
-
-        // Use a slightly larger rectangle for collision detection.
         public Rectangle Bounds => new Rectangle(
             (int)Position.X - CollisionPadding,
             (int)Position.Y - CollisionPadding,
@@ -36,12 +51,14 @@ namespace Survivor_of_the_Bulge
 
         public bool IsDead => isDead;
 
-        public enum EnemyState { Idle, Patrol, Chase, Shoot, Flee, Dead }
+        // Updated finite state with new Charge state.
+        public enum EnemyState { Idle, Patrol, Chase, Shoot, Charge, Flee, Dead }
         public enum Direction { Left, Right, Up, Down }
 
         private Direction currentDirection;
 
-        public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical, Vector2 startPosition, Direction startDirection, int health, int bulletDamage)
+        public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical,
+            Vector2 startPosition, Direction startDirection, int health, int bulletDamage)
         {
             backTexture = back;
             frontTexture = front;
@@ -50,70 +67,110 @@ namespace Survivor_of_the_Bulge
             bulletVerticalTexture = bulletVertical;
             Position = startPosition;
             currentDirection = startDirection;
-            this.health = Math.Max(1, health);
-            this.bulletDamage = Math.Max(1, bulletDamage);
+            Health = health;
+            BulletDamage = bulletDamage;
 
-            speed = 100f;
+            MovementSpeed = 100f;
             bulletSpeed = 300f;
             frameTime = 0.1f;
-            shootingCooldown = 2f;
+            shootingCooldown = FiringInterval;
             shootingTimer = 0f;
+            timeSinceLastShot = 0f;
+            collisionDamageTimer = 0f;
             currentFrame = 0;
-
             int frameW = leftTexture.Width / totalFrames;
             sourceRectangle = new Rectangle(0, 0, frameW, leftTexture.Height);
-
             bullets = new List<Bullet>();
             currentState = EnemyState.Patrol;
         }
 
         public void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
-            if (isDead) return;
+            if (isDead)
+                return;
 
             float distanceToPlayer = Vector2.Distance(Position, playerPosition);
 
+            // State transitions and behavior.
             switch (currentState)
             {
                 case EnemyState.Idle:
                     break;
                 case EnemyState.Patrol:
                     Patrol(viewport);
-                    if (distanceToPlayer < 300) currentState = EnemyState.Chase;
+                    if (distanceToPlayer < 300)
+                        currentState = EnemyState.Chase;
                     break;
                 case EnemyState.Chase:
-                    ChasePlayer(playerPosition);
-                    if (distanceToPlayer < 150) currentState = EnemyState.Shoot;
-                    if (distanceToPlayer > 400) currentState = EnemyState.Flee;
+                    // If close enough, switch to Charge state.
+                    if (distanceToPlayer < ChargeDistanceThreshold)
+                    {
+                        currentState = EnemyState.Charge;
+                    }
+                    else
+                    {
+                        ChasePlayer(playerPosition);
+                        if (distanceToPlayer < 150)
+                            currentState = EnemyState.Shoot;
+                        if (distanceToPlayer > 400)
+                            currentState = EnemyState.Flee;
+                    }
+                    break;
+                case EnemyState.Charge:
+                    // In Charge state, enemy runs at an increased speed directly toward the player.
+                    Charge(playerPosition);
+                    // Optionally, if player gets farther away, revert back to Chase.
+                    if (distanceToPlayer > ChargeDistanceThreshold * 1.5f)
+                        currentState = EnemyState.Chase;
                     break;
                 case EnemyState.Shoot:
-                    shootingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    if (shootingTimer >= shootingCooldown)
+                    timeSinceLastShot += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    if (timeSinceLastShot >= FiringInterval)
                     {
                         Shoot();
-                        shootingTimer = 0;
+                        timeSinceLastShot = 0f;
                     }
-                    if (distanceToPlayer > 200) currentState = EnemyState.Chase;
+                    if (distanceToPlayer > 200)
+                        currentState = EnemyState.Chase;
                     break;
                 case EnemyState.Flee:
                     Flee(playerPosition);
-                    if (distanceToPlayer > 450) currentState = EnemyState.Patrol;
+                    if (distanceToPlayer > 450)
+                        currentState = EnemyState.Patrol;
                     break;
                 case EnemyState.Dead:
                     isDead = true;
                     return;
             }
 
+            // Process enemy bullets hitting the player.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
                 if (bullet.IsActive && player.Bounds.Intersects(bullet.Bounds))
                 {
+                    Debug.WriteLine("Enemy bullet hit player!");
                     player.TakeDamage(bullet.Damage);
                     bullet.Deactivate();
                 }
             }
             bullets.RemoveAll(b => !b.IsActive);
+
+            // Apply collision damage if enemy and player intersect.
+            if (Bounds.Intersects(player.Bounds))
+            {
+                collisionDamageTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (collisionDamageTimer >= CollisionDamageInterval)
+                {
+                    Debug.WriteLine("Enemy collided with player!");
+                    player.TakeDamage(CollisionDamage);
+                    collisionDamageTimer = 0f;
+                }
+            }
+            else
+            {
+                collisionDamageTimer = 0f;
+            }
 
             timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (timer >= frameTime)
@@ -126,11 +183,12 @@ namespace Survivor_of_the_Bulge
 
         public void TakeDamage(int amount)
         {
-            health -= amount;
-            if (health <= 0)
+            Health -= amount;
+            if (Health <= 0)
             {
                 isDead = true;
                 currentState = EnemyState.Dead;
+                Debug.WriteLine("Enemy died!");
             }
         }
 
@@ -138,13 +196,15 @@ namespace Survivor_of_the_Bulge
         {
             if (currentDirection == Direction.Left)
             {
-                Position.X -= speed * 0.02f;
-                if (Position.X <= 0) currentDirection = Direction.Right;
+                Position.X -= MovementSpeed * 0.02f;
+                if (Position.X <= 0)
+                    currentDirection = Direction.Right;
             }
             else if (currentDirection == Direction.Right)
             {
-                Position.X += speed * 0.02f;
-                if (Position.X >= viewport.Width - sourceRectangle.Width) currentDirection = Direction.Left;
+                Position.X += MovementSpeed * 0.02f;
+                if (Position.X >= viewport.Width - sourceRectangle.Width)
+                    currentDirection = Direction.Left;
             }
         }
 
@@ -152,34 +212,36 @@ namespace Survivor_of_the_Bulge
         {
             Vector2 directionVector = playerPosition - Position;
             Vector2 moveDirection = Vector2.Normalize(directionVector);
-
             if (Math.Abs(moveDirection.X) > Math.Abs(moveDirection.Y))
-            {
                 currentDirection = moveDirection.X < 0 ? Direction.Left : Direction.Right;
-            }
             else
-            {
                 currentDirection = moveDirection.Y < 0 ? Direction.Up : Direction.Down;
-            }
+            Position += moveDirection * MovementSpeed * 0.02f;
+        }
 
-            Position += moveDirection * speed * 0.02f;
+        // NEW: In Charge state, enemy runs faster toward the player.
+        private void Charge(Vector2 playerPosition)
+        {
+            Vector2 directionVector = playerPosition - Position;
+            Vector2 moveDirection = Vector2.Normalize(directionVector);
+            // When charging, increase movement speed.
+            Position += moveDirection * MovementSpeed * ChargeMultiplier * 0.02f;
+            // Set current direction based on the movement.
+            if (Math.Abs(moveDirection.X) > Math.Abs(moveDirection.Y))
+                currentDirection = moveDirection.X < 0 ? Direction.Left : Direction.Right;
+            else
+                currentDirection = moveDirection.Y < 0 ? Direction.Up : Direction.Down;
         }
 
         private void Flee(Vector2 playerPosition)
         {
             Vector2 directionVector = Position - playerPosition;
             Vector2 moveDirection = Vector2.Normalize(directionVector);
-
             if (Math.Abs(moveDirection.X) > Math.Abs(moveDirection.Y))
-            {
                 currentDirection = moveDirection.X < 0 ? Direction.Left : Direction.Right;
-            }
             else
-            {
                 currentDirection = moveDirection.Y < 0 ? Direction.Up : Direction.Down;
-            }
-
-            Position += moveDirection * speed * 0.02f;
+            Position += moveDirection * MovementSpeed * 0.02f;
         }
 
         private void Shoot()
@@ -211,7 +273,8 @@ namespace Survivor_of_the_Bulge
             }
 
             Vector2 bulletPosition = Position + new Vector2(sourceRectangle.Width / 2, sourceRectangle.Height / 2);
-            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, bulletDamage, spriteEffect));
+            Debug.WriteLine($"Enemy firing bullet with damage: {BulletDamage}");
+            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, BulletDamage, spriteEffect, BulletRange));
         }
 
         private void UpdateFrameDimensions()
@@ -242,10 +305,8 @@ namespace Survivor_of_the_Bulge
         public void Draw(SpriteBatch spriteBatch)
         {
             if (isDead) return;
-
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
-
             switch (currentDirection)
             {
                 case Direction.Left:
@@ -262,7 +323,6 @@ namespace Survivor_of_the_Bulge
                     currentTexture = frontTexture;
                     break;
             }
-
             spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);

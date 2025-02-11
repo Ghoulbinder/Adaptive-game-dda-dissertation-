@@ -30,8 +30,13 @@ namespace Survivor_of_the_Bulge
             {
                 Level++;
                 Experience = 0;
-                Strength += 5;  // Example: Increase strength when leveling up
+                Strength += 5;  // Increase strength when leveling up
             }
+        }
+
+        public void UpdateHealth(int newHealth)
+        {
+            Health = newHealth;
         }
 
         public void Draw(SpriteBatch spriteBatch, Vector2 position)

@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Survivor_of_the_Bulge
 {
@@ -9,15 +11,23 @@ namespace Survivor_of_the_Bulge
     {
         private Texture2D backTexture, frontTexture, leftTexture, bulletHorizontalTexture, bulletVerticalTexture;
         public Vector2 Position;
-        private float speed = 200f;
+
+        // Modular parameters for the player.
+        public float MovementSpeed { get; set; } = 200f;
+        public float FiringInterval { get; set; } = 1.0f; // seconds between shots
+        public float BulletRange { get; set; } = 500f;    // maximum bullet travel distance
+
         private int health = 100;
         private int bulletDamage = 10; // Player bullet damage
 
+        // Expose health as a public property.
+        public int Health => health;
+
         private Rectangle sourceRectangle;
-        private float frameTime = 0.1f;  // Time per frame for animation
-        private float timer = 0f;        // Timer to track animation progress
+        private float frameTime = 0.1f;
+        private float timer = 0f;
         private int currentFrame = 0;
-        private int totalFrames = 4;     // Total frames in the sprite sheet
+        private int totalFrames = 4;
 
         private int frameWidth;
         private int frameHeight;
@@ -27,8 +37,8 @@ namespace Survivor_of_the_Bulge
 
         private List<Bullet> bullets;
         private float bulletSpeed = 500f;
+        private float timeSinceLastShot = 0f;
 
-        // Property to get the player's collision bounds.
         public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, frameWidth, frameHeight);
 
         public Player(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontalTexture, Texture2D bulletVerticalTexture, Vector2 startPosition)
@@ -40,13 +50,9 @@ namespace Survivor_of_the_Bulge
             this.bulletHorizontalTexture = bulletHorizontalTexture;
             this.bulletVerticalTexture = bulletVerticalTexture;
 
-            // Calculate frame dimensions based on the front texture (assuming all directions have similar dimensions).
             frameWidth = frontTexture.Width / totalFrames;
             frameHeight = frontTexture.Height;
-
-            // Initialize the source rectangle to display the first frame.
             sourceRectangle = new Rectangle(0, 0, frameWidth, frameHeight);
-
             bullets = new List<Bullet>();
         }
 
@@ -55,34 +61,31 @@ namespace Survivor_of_the_Bulge
             Vector2 movement = Vector2.Zero;
             var keyboardState = Keyboard.GetState();
 
-            // Handle movement input and update current direction.
             if (keyboardState.IsKeyDown(Keys.W))
             {
-                movement.Y -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                movement.Y -= MovementSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
                 currentDirection = Direction.Up;
             }
             else if (keyboardState.IsKeyDown(Keys.S))
             {
-                movement.Y += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                movement.Y += MovementSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
                 currentDirection = Direction.Down;
             }
             else if (keyboardState.IsKeyDown(Keys.A))
             {
-                movement.X -= speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                movement.X -= MovementSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
                 currentDirection = Direction.Left;
             }
             else if (keyboardState.IsKeyDown(Keys.D))
             {
-                movement.X += speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                movement.X += MovementSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
                 currentDirection = Direction.Right;
             }
 
-            // Update the player's position.
             Position += movement;
             Position.X = MathHelper.Clamp(Position.X, 0, viewport.Width - frameWidth);
             Position.Y = MathHelper.Clamp(Position.Y, 0, viewport.Height - frameHeight);
 
-            // Update animation if moving.
             if (movement != Vector2.Zero)
             {
                 timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -92,22 +95,20 @@ namespace Survivor_of_the_Bulge
                     timer = 0f;
                 }
             }
-
-            // Update the source rectangle for the current animation frame.
             UpdateFrameDimensions();
 
-            // Handle shooting input.
-            if (keyboardState.IsKeyDown(Keys.Space))
+            // Update firing timer and handle shooting.
+            timeSinceLastShot += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (keyboardState.IsKeyDown(Keys.Space) && timeSinceLastShot >= FiringInterval)
             {
                 Shoot();
+                timeSinceLastShot = 0f;
             }
 
-            // Update bullets and check for collision with enemies.
+            // Update bullets and check collision with enemies.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
-
-                // Now using bullet.Bounds (from its texture dimensions) for collision detection.
                 foreach (var enemy in enemies)
                 {
                     if (bullet.IsActive && enemy.Bounds.Intersects(bullet.Bounds))
@@ -123,9 +124,11 @@ namespace Survivor_of_the_Bulge
         public void TakeDamage(int amount)
         {
             health -= amount;
+            Debug.WriteLine($"Player took {amount} damage. Health now: {health}");
             if (health <= 0)
             {
-                // Handle player death (respawn or game over).
+                Debug.WriteLine("Player has died!");
+                // Add additional game-over or respawn logic here.
             }
         }
 
@@ -135,7 +138,6 @@ namespace Survivor_of_the_Bulge
             Texture2D bulletTexture = bulletHorizontalTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
 
-            // Determine bullet direction and set the texture accordingly.
             switch (currentDirection)
             {
                 case Direction.Up:
@@ -158,13 +160,12 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            // Calculate the bullet's starting position.
             float chestOffset = frameHeight / 2f;
             Vector2 bulletPosition = Position + new Vector2(frameWidth / 2, chestOffset);
-            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, bulletDamage, spriteEffects));
+            // Create a bullet with the player's bullet range.
+            bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, bulletDamage, spriteEffects, BulletRange));
         }
 
-        // Update the frame dimensions and source rectangle so only one frame is drawn.
         private void UpdateFrameDimensions()
         {
             switch (currentDirection)
@@ -191,7 +192,6 @@ namespace Survivor_of_the_Bulge
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
 
-            // Select the appropriate texture based on the current direction.
             switch (currentDirection)
             {
                 case Direction.Left:
@@ -209,10 +209,7 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            // Draw the player's current animation frame.
             spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
-
-            // Draw all active bullets.
             foreach (var bullet in bullets)
             {
                 bullet.Draw(spriteBatch);
