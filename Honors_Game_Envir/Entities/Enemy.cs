@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 //Enemy not charging towards player
+//wierd
+
 
 namespace Survivor_of_the_Bulge
 {
