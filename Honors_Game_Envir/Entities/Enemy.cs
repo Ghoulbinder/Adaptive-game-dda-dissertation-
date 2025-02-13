@@ -18,8 +18,8 @@ namespace Survivor_of_the_Bulge
         public int BulletDamage { get; set; } = 5;
         public float FiringInterval { get; set; } = 2f;  // Seconds between enemy shots
         public float BulletRange { get; set; } = 400f;
-        public int CollisionDamage { get; set; } = 15;       // Damage when enemy collides with player
-        public float CollisionDamageInterval { get; set; } = 1f; // Apply collision damage once per second
+        public int CollisionDamage { get; set; } = 15;
+        public float CollisionDamageInterval { get; set; } = 1f;
 
         // NEW: Charge state multiplier and threshold.
         public float ChargeMultiplier { get; set; } = 2.0f;
@@ -40,7 +40,6 @@ namespace Survivor_of_the_Bulge
         protected float shootingTimer;
         protected bool isDead = false;
 
-        // Extra collision padding.
         protected const int CollisionPadding = 5;
         public Rectangle Bounds => new Rectangle(
             (int)Position.X - CollisionPadding,
@@ -50,12 +49,12 @@ namespace Survivor_of_the_Bulge
 
         public bool IsDead => isDead;
 
-        // Updated finite state with new Charge state.
         public enum EnemyState { Idle, Patrol, Chase, Shoot, Charge, Flee, Dead }
         public enum Direction { Left, Right, Up, Down }
         protected Direction currentDirection;
 
-        public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical,
+        public Enemy(Texture2D back, Texture2D front, Texture2D left,
+            Texture2D bulletHorizontal, Texture2D bulletVertical,
             Vector2 startPosition, Direction startDirection, int health, int bulletDamage)
         {
             backTexture = back;
@@ -84,12 +83,10 @@ namespace Survivor_of_the_Bulge
 
         public virtual void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
-            if (isDead)
-                return;
+            if (isDead) return;
 
             float distanceToPlayer = Vector2.Distance(Position, playerPosition);
 
-            // State transitions and behavior.
             switch (currentState)
             {
                 case EnemyState.Idle:
@@ -138,7 +135,7 @@ namespace Survivor_of_the_Bulge
                     return;
             }
 
-            // Process enemy bullets hitting the player.
+            // Update bullets and check collision with the player.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -151,7 +148,7 @@ namespace Survivor_of_the_Bulge
             }
             bullets.RemoveAll(b => !b.IsActive);
 
-            // Apply collision damage if enemy and player intersect.
+            // Collision damage if enemy touches player.
             if (Bounds.Intersects(player.Bounds))
             {
                 collisionDamageTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -296,8 +293,7 @@ namespace Survivor_of_the_Bulge
 
         public virtual void Draw(SpriteBatch spriteBatch)
         {
-            if (isDead)
-                return;
+            if (isDead) return;
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
             switch (currentDirection)

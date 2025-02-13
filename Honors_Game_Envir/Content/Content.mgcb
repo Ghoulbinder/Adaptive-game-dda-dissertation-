@@ -938,7 +938,7 @@
 /processorParam:TextureFormat=Color
 /build:Ogre_Boss/OgreBossWalking/OgreBossWalkingUp.png
 
-#begin Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_022.png
+#begin Player_Ranged/PlayerRangeAttack/PlayerRangeAttackDown.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -948,9 +948,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_022.png
+/build:Player_Ranged/PlayerRangeAttack/PlayerRangeAttackDown.png
 
-#begin Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_090.png
+#begin Player_Ranged/PlayerRangeAttack/PlayerRangeAttackLeft.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -960,9 +960,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_090.png
+/build:Player_Ranged/PlayerRangeAttack/PlayerRangeAttackLeft.png
 
-#begin Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_202.png
+#begin Player_Ranged/PlayerRangeAttack/PlayerRangeAttackRight.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -972,9 +972,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_202.png
+/build:Player_Ranged/PlayerRangeAttack/PlayerRangeAttackRight.png
 
-#begin Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_292.png
+#begin Player_Ranged/PlayerRangeAttack/PlayerRangeAttackUp.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -984,7 +984,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeAttack/Attack_Bow_Body_292.png
+/build:Player_Ranged/PlayerRangeAttack/PlayerRangeAttackUp.png
 
 #begin Player_Ranged/PlayerRangeDeath/PlayerRangeDeathDown.png
 /importer:TextureImporter
@@ -1034,7 +1034,7 @@
 /processorParam:TextureFormat=Color
 /build:Player_Ranged/PlayerRangeDeath/PlayerRangeDeathUp.png
 
-#begin Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_000.png
+#begin Player_Ranged/PlayerRangeIdle/PlayerRangeIdleDown.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1044,9 +1044,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_000.png
+/build:Player_Ranged/PlayerRangeIdle/PlayerRangeIdleDown.png
 
-#begin Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_090.png
+#begin Player_Ranged/PlayerRangeIdle/PlayerRangeIdleLeft.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1056,9 +1056,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_090.png
+/build:Player_Ranged/PlayerRangeIdle/PlayerRangeIdleLeft.png
 
-#begin Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_180.png
+#begin Player_Ranged/PlayerRangeIdle/PlayerRangeIdleRight.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1068,9 +1068,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_180.png
+/build:Player_Ranged/PlayerRangeIdle/PlayerRangeIdleRight.png
 
-#begin Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_270.png
+#begin Player_Ranged/PlayerRangeIdle/PlayerRangeIdleUp.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1080,9 +1080,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeIdle/Idle_Bow_Body_270.png
+/build:Player_Ranged/PlayerRangeIdle/PlayerRangeIdleUp.png
 
-#begin Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_000.png
+#begin Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingDown.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1092,9 +1092,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_000.png
+/build:Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingDown.png
 
-#begin Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_090.png
+#begin Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingLeft.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1104,9 +1104,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_090.png
+/build:Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingLeft.png
 
-#begin Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_180.png
+#begin Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingRight.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1116,9 +1116,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_180.png
+/build:Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingRight.png
 
-#begin Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_270.png
+#begin Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingUp.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -1128,7 +1128,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Player_Ranged/PlayerRangeWalking/WalkForward_Bow_Body_270.png
+/build:Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingUp.png
 
 #begin Spider_Boss/SpiderBossAttack/SpiderBossAttackDown.png
 /importer:TextureImporter

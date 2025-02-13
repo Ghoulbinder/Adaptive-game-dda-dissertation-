@@ -38,7 +38,7 @@ namespace Survivor_of_the_Bulge
         private List<Transition> transitions;
         private Dictionary<GameState, Map> maps;
 
-        // Weather effects.
+        // Weather effects
         private List<FallingLeaf> fallingLeaves;
         private List<SnowFlake> snowFlakes;
         private Random random = new Random();
@@ -83,27 +83,48 @@ namespace Survivor_of_the_Bulge
             mainMenuBackground = Content.Load<Texture2D>("Images/Maps/mmBackground2");
             gameFont = Content.Load<SpriteFont>("Fonts/jungleFont");
 
-            Texture2D bulletHorizontalTexture = Content.Load<Texture2D>("Images/Projectile/bullet");
-            Texture2D bulletVerticalTexture = Content.Load<Texture2D>("Images/Projectile/bullet2");
+            // 1) Load bullet texture
+            Texture2D bulletTexture = Content.Load<Texture2D>("Images/Projectile/bullet");
 
-            // Create the player with modular parameters.
+            // 2) Load all 12 player textures (Idle, Walk, Attack) × (Up, Down, Left, Right)
+            // Idle
+            Texture2D idleUp = Content.Load<Texture2D>("Player_Ranged/PlayerRangeIdle/PlayerRangeIdleUp");
+            Texture2D idleDown = Content.Load<Texture2D>("Player_Ranged/PlayerRangeIdle/PlayerRangeIdleDown");
+            Texture2D idleLeft = Content.Load<Texture2D>("Player_Ranged/PlayerRangeIdle/PlayerRangeIdleLeft");
+            Texture2D idleRight = Content.Load<Texture2D>("Player_Ranged/PlayerRangeIdle/PlayerRangeIdleRight");
+
+            // Walk
+            Texture2D walkUp = Content.Load<Texture2D>("Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingUp");
+            Texture2D walkDown = Content.Load<Texture2D>("Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingDown");
+            Texture2D walkLeft = Content.Load<Texture2D>("Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingLeft");
+            Texture2D walkRight = Content.Load<Texture2D>("Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingRight");
+
+            // Attack
+            Texture2D attackUp = Content.Load<Texture2D>("Player_Ranged/PlayerRangeAttack/PlayerRangeAttackUp");
+            Texture2D attackDown = Content.Load<Texture2D>("Player_Ranged/PlayerRangeAttack/PlayerRangeAttackDown");
+            Texture2D attackLeft = Content.Load<Texture2D>("Player_Ranged/PlayerRangeAttack/PlayerRangeAttackLeft");
+            Texture2D attackRight = Content.Load<Texture2D>("Player_Ranged/PlayerRangeAttack/PlayerRangeAttackRight");
+
+            // 3) Create the new Player with 12 sheets
             player = new Player(
-                Content.Load<Texture2D>("Images/Soldier/backWalking"),
-                Content.Load<Texture2D>("Images/Soldier/frontWalking"),
-                Content.Load<Texture2D>("Images/Soldier/leftWalking"),
-                bulletHorizontalTexture,
-                bulletVerticalTexture,
+                idleUp, idleDown, idleLeft, idleRight,
+                walkUp, walkDown, walkLeft, walkRight,
+                attackUp, attackDown, attackLeft, attackRight,
+                bulletTexture,
                 new Vector2(100, 100)
             );
 
-            // Initialize the player stats.
+            // Optionally scale the player further if needed
+            player.Scale = 0.5f; // half-size
+
+            // Initialize player stats, menu
             playerStats = new PlayerStats(100, 50, 10, 0, 1, gameFont);
             menuState = new MenuState(gameFont, mainMenuBackground);
 
-            // Initialize maps (only GreenForestCentre will have enemies).
+            // Initialize maps (GreenForestCentre has enemies)
             InitializeMaps();
 
-            // After maps are initialized, add a Boss to the GreenForestCentre map.
+            // Optionally add a Boss to GreenForestCentre
             Boss boss = new Boss(
                 Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
                 Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
@@ -112,25 +133,24 @@ namespace Survivor_of_the_Bulge
                 Content.Load<Texture2D>("Images/Projectile/bullet2"),
                 new Vector2(300, 300),
                 Boss.Direction.Up,
-                300,  // Boss health
-                15    // Boss bullet damage
+                300,
+                15
             );
             maps[GameState.GreenForestCentre].AddEnemy(boss);
 
-            // Adjust viewport based on the largest map's background.
+            // Adjust viewport to map size
             var largestMap = maps[GameState.GreenForestCentre];
             _graphics.PreferredBackBufferWidth = largestMap.Background.Width;
             _graphics.PreferredBackBufferHeight = largestMap.Background.Height;
             _graphics.ApplyChanges();
 
-            // Load weather textures and create falling particles.
+            // Load weather textures
             Texture2D leafTexture = Content.Load<Texture2D>("Images/Maps/tinyleaf");
             Texture2D snowTexture = Content.Load<Texture2D>("Images/Maps/snowFlake");
 
-            int particleCount = 100;
+            int particleCount = 20;
             fallingLeaves = new List<FallingLeaf>();
             snowFlakes = new List<SnowFlake>();
-
             for (int i = 0; i < particleCount; i++)
             {
                 fallingLeaves.Add(new FallingLeaf(leafTexture, random, _graphics.PreferredBackBufferWidth));
@@ -138,78 +158,8 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        private void SpawnEnemiesForMap(
-            Map map,
-            int enemyCount,
-            Texture2D enemyBackTexture,
-            Texture2D enemyFrontTexture,
-            Texture2D enemyLeftTexture,
-            Texture2D enemyBulletHorizontal,
-            Texture2D enemyBulletVertical)
-        {
-            int totalFrames = 4;
-            int enemyWidth = enemyLeftTexture.Width / totalFrames;
-            int enemyHeight = enemyLeftTexture.Height;
-
-            for (int i = 0; i < enemyCount; i++)
-            {
-                bool validPosition = false;
-                int attempts = 0;
-                int x = 0, y = 0;
-                int maxAttempts = 50;
-
-                while (!validPosition && attempts < maxAttempts)
-                {
-                    x = random.Next(0, Math.Max(1, map.Background.Width - enemyWidth));
-                    y = random.Next(0, Math.Max(1, map.Background.Height - enemyHeight));
-                    Rectangle candidate = new Rectangle(x, y, enemyWidth, enemyHeight);
-
-                    validPosition = true;
-                    foreach (Enemy existingEnemy in map.Enemies)
-                    {
-                        if (candidate.Intersects(existingEnemy.Bounds))
-                        {
-                            validPosition = false;
-                            break;
-                        }
-                    }
-                    attempts++;
-                }
-
-                Array directions = Enum.GetValues(typeof(Enemy.Direction));
-                Enemy.Direction randomDirection = (Enemy.Direction)directions.GetValue(random.Next(directions.Length));
-
-                int baseHealth = 50;
-                int baseDamage = 5;
-                int enemyHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
-                int enemyDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
-
-                Enemy enemy = new Enemy(
-                    enemyBackTexture,
-                    enemyFrontTexture,
-                    enemyLeftTexture,
-                    enemyBulletHorizontal,
-                    enemyBulletVertical,
-                    new Vector2(x, y),
-                    randomDirection,
-                    enemyHealth,
-                    enemyDamage
-                );
-                map.AddEnemy(enemy);
-            }
-        }
-
         private void InitializeMaps()
         {
-            // We only want enemies (and the boss) on the GreenForestCentre map.
-            Texture2D enemyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/bullet");
-            Texture2D enemyBulletVertical = Content.Load<Texture2D>("Images/Projectile/bullet2");
-
-            Texture2D enemyBackTexture = Content.Load<Texture2D>("Images/Enemy/enemyBackWalking");
-            Texture2D enemyFrontTexture = Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking");
-            Texture2D enemyLeftTexture = Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking");
-
-            // Create maps. Only GreenForestCentre will have enemies; others are empty.
             maps = new Dictionary<GameState, Map>
             {
                 { GameState.GreenForestCentre, new Map(Content.Load<Texture2D>("Images/Maps/greenForestCentre2"), new List<Enemy>()) },
@@ -219,24 +169,71 @@ namespace Survivor_of_the_Bulge
                 { GameState.ForestRight, new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"), new List<Enemy>()) }
             };
 
-            // Only spawn enemies for the GreenForestCentre map.
-            int enemyCountPerMap = DifficultyManager.Instance.BaseEnemyCount;
-            SpawnEnemiesForMap(maps[GameState.GreenForestCentre], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
+            // Optionally spawn normal enemies in GreenForestCentre
+            Texture2D enemyBack = Content.Load<Texture2D>("Images/Enemy/enemyBackWalking");
+            Texture2D enemyFront = Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking");
+            Texture2D enemyLeft = Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking");
+            Texture2D enemyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/bullet");
+            Texture2D enemyBulletVertical = Content.Load<Texture2D>("Images/Projectile/bullet2");
+
+            int enemyCount = DifficultyManager.Instance.BaseEnemyCount;
+            SpawnEnemiesForMap(
+                maps[GameState.GreenForestCentre],
+                enemyCount,
+                enemyBack,
+                enemyFront,
+                enemyLeft,
+                enemyBulletHorizontal,
+                enemyBulletVertical
+            );
+        }
+
+        private void SpawnEnemiesForMap(
+            Map map,
+            int enemyCount,
+            Texture2D enemyBack,
+            Texture2D enemyFront,
+            Texture2D enemyLeft,
+            Texture2D enemyBulletHorizontal,
+            Texture2D enemyBulletVertical)
+        {
+            for (int i = 0; i < enemyCount; i++)
+            {
+                int x = random.Next(0, map.Background.Width - 64);
+                int y = random.Next(0, map.Background.Height - 64);
+                Array dirs = Enum.GetValues(typeof(Enemy.Direction));
+                Enemy.Direction dir = (Enemy.Direction)dirs.GetValue(random.Next(dirs.Length));
+
+                int baseHealth = 50;
+                int baseDamage = 5;
+                int finalHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
+                int finalDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
+
+                Enemy e = new Enemy(
+                    enemyBack,
+                    enemyFront,
+                    enemyLeft,
+                    enemyBulletHorizontal,
+                    enemyBulletVertical,
+                    new Vector2(x, y),
+                    dir,
+                    finalHealth,
+                    finalDamage
+                );
+                map.AddEnemy(e);
+            }
         }
 
         protected override void Update(GameTime gameTime)
         {
             var currentKeyboardState = Keyboard.GetState();
-
             if (currentKeyboardState.IsKeyDown(Keys.Escape))
                 Exit();
 
             if (currentKeyboardState.IsKeyDown(Keys.G) && previousKeyboardState.IsKeyUp(Keys.G))
                 showGrid = !showGrid;
-
             if (currentKeyboardState.IsKeyDown(Keys.Tab) && previousKeyboardState.IsKeyUp(Keys.Tab))
                 showStats = !showStats;
-
             if (currentState == GameState.MainMenu && currentKeyboardState.IsKeyDown(Keys.Enter))
                 currentState = GameState.GreenForestCentre;
 
@@ -244,24 +241,24 @@ namespace Survivor_of_the_Bulge
             {
                 var currentMap = maps[currentState];
 
-                // Update player and UI stats.
+                // Update player + UI
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
                 playerStats.UpdateHealth(player.Health);
 
-                // Update each enemy.
+                // Update enemies
                 foreach (var enemy in currentMap.Enemies)
                 {
                     enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport, player.Position, player);
                 }
                 currentMap.Enemies.RemoveAll(e => e.IsDead);
 
-                // Update weather effects.
+                // Update weather
                 foreach (var leaf in fallingLeaves)
                     leaf.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
                 foreach (var snow in snowFlakes)
                     snow.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
 
-                // Process map transitions.
+                // Handle map transitions
                 foreach (var transition in transitions)
                 {
                     if (transition.From == currentState && transition.Zone.Intersects(player.Bounds))
@@ -287,7 +284,6 @@ namespace Survivor_of_the_Bulge
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
             _spriteBatch.Begin();
 
             if (currentState == GameState.MainMenu)
@@ -300,24 +296,25 @@ namespace Survivor_of_the_Bulge
                 var currentMap = maps[currentState];
                 _spriteBatch.Draw(currentMap.Background, Vector2.Zero, Color.White);
 
-                // Draw weather effects.
                 foreach (var snow in snowFlakes)
                     snow.Draw(_spriteBatch);
                 foreach (var leaf in fallingLeaves)
                     leaf.Draw(_spriteBatch);
 
+                // Draw player
                 player.Draw(_spriteBatch);
 
+                // Draw enemies
                 foreach (var enemy in currentMap.Enemies)
                 {
                     enemy.Draw(_spriteBatch);
                 }
 
+                // Draw stats
                 playerStats.Draw(_spriteBatch, new Vector2(10, 10));
 
                 if (showGrid)
                     DrawGrid();
-
                 if (showStats)
                     DrawDebugStats();
             }
@@ -330,16 +327,10 @@ namespace Survivor_of_the_Bulge
         {
             Texture2D gridTexture = new Texture2D(GraphicsDevice, 1, 1);
             gridTexture.SetData(new[] { Color.Gray });
-
             for (int x = 0; x < _graphics.PreferredBackBufferWidth; x += TileSize)
-            {
                 _spriteBatch.Draw(gridTexture, new Rectangle(x, 0, 1, _graphics.PreferredBackBufferHeight), Color.Gray);
-            }
-
             for (int y = 0; y < _graphics.PreferredBackBufferHeight; y += TileSize)
-            {
                 _spriteBatch.Draw(gridTexture, new Rectangle(0, y, _graphics.PreferredBackBufferWidth, 1), Color.Gray);
-            }
         }
 
         private void DrawDebugStats()
