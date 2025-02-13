@@ -100,6 +100,7 @@ namespace Survivor_of_the_Bulge
             playerStats = new PlayerStats(100, 50, 10, 0, 1, gameFont);
             menuState = new MenuState(gameFont, mainMenuBackground);
 
+            // Initialize maps (only GreenForestCentre will have enemies).
             InitializeMaps();
 
             // After maps are initialized, add a Boss to the GreenForestCentre map.
@@ -114,7 +115,6 @@ namespace Survivor_of_the_Bulge
                 300,  // Boss health
                 15    // Boss bullet damage
             );
-            // Add the boss to the enemy list.
             maps[GameState.GreenForestCentre].AddEnemy(boss);
 
             // Adjust viewport based on the largest map's background.
@@ -127,7 +127,7 @@ namespace Survivor_of_the_Bulge
             Texture2D leafTexture = Content.Load<Texture2D>("Images/Maps/tinyleaf");
             Texture2D snowTexture = Content.Load<Texture2D>("Images/Maps/snowFlake");
 
-            int particleCount = 20;
+            int particleCount = 100;
             fallingLeaves = new List<FallingLeaf>();
             snowFlakes = new List<SnowFlake>();
 
@@ -201,6 +201,7 @@ namespace Survivor_of_the_Bulge
 
         private void InitializeMaps()
         {
+            // We only want enemies (and the boss) on the GreenForestCentre map.
             Texture2D enemyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/bullet");
             Texture2D enemyBulletVertical = Content.Load<Texture2D>("Images/Projectile/bullet2");
 
@@ -208,6 +209,7 @@ namespace Survivor_of_the_Bulge
             Texture2D enemyFrontTexture = Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking");
             Texture2D enemyLeftTexture = Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking");
 
+            // Create maps. Only GreenForestCentre will have enemies; others are empty.
             maps = new Dictionary<GameState, Map>
             {
                 { GameState.GreenForestCentre, new Map(Content.Load<Texture2D>("Images/Maps/greenForestCentre2"), new List<Enemy>()) },
@@ -217,13 +219,9 @@ namespace Survivor_of_the_Bulge
                 { GameState.ForestRight, new Map(Content.Load<Texture2D>("Images/Maps/snowForestRight2"), new List<Enemy>()) }
             };
 
+            // Only spawn enemies for the GreenForestCentre map.
             int enemyCountPerMap = DifficultyManager.Instance.BaseEnemyCount;
-
             SpawnEnemiesForMap(maps[GameState.GreenForestCentre], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
-            SpawnEnemiesForMap(maps[GameState.ForestTop], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
-            SpawnEnemiesForMap(maps[GameState.ForestLeft], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
-            SpawnEnemiesForMap(maps[GameState.ForestButtom], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
-            SpawnEnemiesForMap(maps[GameState.ForestRight], enemyCountPerMap, enemyBackTexture, enemyFrontTexture, enemyLeftTexture, enemyBulletHorizontal, enemyBulletVertical);
         }
 
         protected override void Update(GameTime gameTime)
@@ -246,7 +244,7 @@ namespace Survivor_of_the_Bulge
             {
                 var currentMap = maps[currentState];
 
-                // Update player and update UI stats.
+                // Update player and UI stats.
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
                 playerStats.UpdateHealth(player.Health);
 
