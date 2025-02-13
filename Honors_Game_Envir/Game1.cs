@@ -86,7 +86,7 @@ namespace Survivor_of_the_Bulge
             Texture2D bulletHorizontalTexture = Content.Load<Texture2D>("Images/Projectile/bullet");
             Texture2D bulletVerticalTexture = Content.Load<Texture2D>("Images/Projectile/bullet2");
 
-            // Create the player with modular parameters (default values can later be adjusted by a DDA tool)
+            // Create the player with modular parameters.
             player = new Player(
                 Content.Load<Texture2D>("Images/Soldier/backWalking"),
                 Content.Load<Texture2D>("Images/Soldier/frontWalking"),
@@ -101,6 +101,21 @@ namespace Survivor_of_the_Bulge
             menuState = new MenuState(gameFont, mainMenuBackground);
 
             InitializeMaps();
+
+            // After maps are initialized, add a Boss to the GreenForestCentre map.
+            Boss boss = new Boss(
+                Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                Content.Load<Texture2D>("Images/Projectile/bullet"),
+                Content.Load<Texture2D>("Images/Projectile/bullet2"),
+                new Vector2(300, 300),
+                Boss.Direction.Up,
+                300,  // Boss health
+                15    // Boss bullet damage
+            );
+            // Add the boss to the enemy list.
+            maps[GameState.GreenForestCentre].AddEnemy(boss);
 
             // Adjust viewport based on the largest map's background.
             var largestMap = maps[GameState.GreenForestCentre];

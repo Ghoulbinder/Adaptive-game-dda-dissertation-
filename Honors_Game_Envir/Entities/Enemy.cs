@@ -3,48 +3,45 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-//Enemy not charging towards player
-//wierd
-
 
 namespace Survivor_of_the_Bulge
 {
     public class Enemy
     {
-        private Texture2D backTexture, frontTexture, leftTexture, bulletHorizontalTexture, bulletVerticalTexture;
+        // Marked as protected so derived classes (like Boss) can access them.
+        protected Texture2D backTexture, frontTexture, leftTexture, bulletHorizontalTexture, bulletVerticalTexture;
         public Vector2 Position;
 
         // Modular enemy parameters.
         public float MovementSpeed { get; set; } = 100f;
-        public int Health { get; private set; }
+        public int Health { get; protected set; }
         public int BulletDamage { get; set; } = 5;
         public float FiringInterval { get; set; } = 2f;  // Seconds between enemy shots
         public float BulletRange { get; set; } = 400f;
         public int CollisionDamage { get; set; } = 15;       // Damage when enemy collides with player
         public float CollisionDamageInterval { get; set; } = 1f; // Apply collision damage once per second
 
-        // NEW: Charge state multiplier (increases speed when charging)
+        // NEW: Charge state multiplier and threshold.
         public float ChargeMultiplier { get; set; } = 2.0f;
-        // NEW: Distance threshold to switch into Charge state.
         public float ChargeDistanceThreshold { get; set; } = 100f;
 
-        private float timeSinceLastShot = 0f;
-        private float collisionDamageTimer = 0f;
+        protected float timeSinceLastShot = 0f;
+        protected float collisionDamageTimer = 0f;
 
-        private Rectangle sourceRectangle;
-        private float frameTime = 0.1f;
-        private float timer = 0f;
-        private int currentFrame;
-        private int totalFrames = 4;
-        private List<Bullet> bullets;
-        private float bulletSpeed;
-        private EnemyState currentState;
-        private float shootingCooldown;
-        private float shootingTimer;
-        private bool isDead = false;
+        protected Rectangle sourceRectangle;
+        protected float frameTime = 0.1f;
+        protected float timer = 0f;
+        protected int currentFrame;
+        protected int totalFrames = 4;
+        protected List<Bullet> bullets;
+        protected float bulletSpeed;
+        protected EnemyState currentState;
+        protected float shootingCooldown;
+        protected float shootingTimer;
+        protected bool isDead = false;
 
         // Extra collision padding.
-        private const int CollisionPadding = 5;
+        protected const int CollisionPadding = 5;
         public Rectangle Bounds => new Rectangle(
             (int)Position.X - CollisionPadding,
             (int)Position.Y - CollisionPadding,
@@ -56,8 +53,7 @@ namespace Survivor_of_the_Bulge
         // Updated finite state with new Charge state.
         public enum EnemyState { Idle, Patrol, Chase, Shoot, Charge, Flee, Dead }
         public enum Direction { Left, Right, Up, Down }
-
-        private Direction currentDirection;
+        protected Direction currentDirection;
 
         public Enemy(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical,
             Vector2 startPosition, Direction startDirection, int health, int bulletDamage)
@@ -86,7 +82,7 @@ namespace Survivor_of_the_Bulge
             currentState = EnemyState.Patrol;
         }
 
-        public void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
+        public virtual void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
             if (isDead)
                 return;
@@ -104,7 +100,6 @@ namespace Survivor_of_the_Bulge
                         currentState = EnemyState.Chase;
                     break;
                 case EnemyState.Chase:
-                    // If close enough, switch to Charge state.
                     if (distanceToPlayer < ChargeDistanceThreshold)
                     {
                         currentState = EnemyState.Charge;
@@ -119,9 +114,7 @@ namespace Survivor_of_the_Bulge
                     }
                     break;
                 case EnemyState.Charge:
-                    // In Charge state, enemy runs at an increased speed directly toward the player.
                     Charge(playerPosition);
-                    // Optionally, if player gets farther away, revert back to Chase.
                     if (distanceToPlayer > ChargeDistanceThreshold * 1.5f)
                         currentState = EnemyState.Chase;
                     break;
@@ -183,7 +176,7 @@ namespace Survivor_of_the_Bulge
             UpdateFrameDimensions();
         }
 
-        public void TakeDamage(int amount)
+        public virtual void TakeDamage(int amount)
         {
             Health -= amount;
             if (Health <= 0)
@@ -194,7 +187,7 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        private void Patrol(Viewport viewport)
+        protected virtual void Patrol(Viewport viewport)
         {
             if (currentDirection == Direction.Left)
             {
@@ -210,7 +203,7 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        private void ChasePlayer(Vector2 playerPosition)
+        protected virtual void ChasePlayer(Vector2 playerPosition)
         {
             Vector2 directionVector = playerPosition - Position;
             Vector2 moveDirection = Vector2.Normalize(directionVector);
@@ -221,21 +214,18 @@ namespace Survivor_of_the_Bulge
             Position += moveDirection * MovementSpeed * 0.02f;
         }
 
-        // NEW: In Charge state, enemy runs faster toward the player.
-        private void Charge(Vector2 playerPosition)
+        protected virtual void Charge(Vector2 playerPosition)
         {
             Vector2 directionVector = playerPosition - Position;
             Vector2 moveDirection = Vector2.Normalize(directionVector);
-            // When charging, increase movement speed.
             Position += moveDirection * MovementSpeed * ChargeMultiplier * 0.02f;
-            // Set current direction based on the movement.
             if (Math.Abs(moveDirection.X) > Math.Abs(moveDirection.Y))
                 currentDirection = moveDirection.X < 0 ? Direction.Left : Direction.Right;
             else
                 currentDirection = moveDirection.Y < 0 ? Direction.Up : Direction.Down;
         }
 
-        private void Flee(Vector2 playerPosition)
+        protected virtual void Flee(Vector2 playerPosition)
         {
             Vector2 directionVector = Position - playerPosition;
             Vector2 moveDirection = Vector2.Normalize(directionVector);
@@ -246,7 +236,7 @@ namespace Survivor_of_the_Bulge
             Position += moveDirection * MovementSpeed * 0.02f;
         }
 
-        private void Shoot()
+        protected virtual void Shoot()
         {
             Vector2 bulletDirection = Vector2.Zero;
             Texture2D bulletTexture = bulletHorizontalTexture;
@@ -279,7 +269,7 @@ namespace Survivor_of_the_Bulge
             bullets.Add(new Bullet(bulletTexture, bulletPosition, bulletDirection, bulletSpeed, BulletDamage, spriteEffect, BulletRange));
         }
 
-        private void UpdateFrameDimensions()
+        protected virtual void UpdateFrameDimensions()
         {
             int textureWidth = 0;
             int textureHeight = 0;
@@ -304,9 +294,10 @@ namespace Survivor_of_the_Bulge
             sourceRectangle = new Rectangle(currentFrame * frameW, 0, frameW, frameH);
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public virtual void Draw(SpriteBatch spriteBatch)
         {
-            if (isDead) return;
+            if (isDead)
+                return;
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
             switch (currentDirection)
