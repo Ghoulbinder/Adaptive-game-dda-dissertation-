@@ -128,24 +128,47 @@ namespace Survivor_of_the_Bulge
             // Initialize maps.
             InitializeMaps();
 
-            // Automatically spawn the ButterflyBoss on the ForestTop map for testing.
-            Map forestTopMap = maps[GameState.ForestTop];
-            // Load the ButterflyBoss idle texture (1536x1024) and the common texture (1024x1280) for attack/walk/death.
-            Texture2D bossIdle = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossIdle/ButterflyBossIdleUp");
-            Texture2D bossCommon = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
-            Vector2 bossPos = new Vector2((forestTopMap.Background.Width - 256) / 2, (forestTopMap.Background.Height - 256) / 2);
-            ButterflyBoss butterflyBoss = new ButterflyBoss(
-                bossIdle,
-                bossCommon,
-                Content.Load<Texture2D>("Images/Projectile/bullet"),
-                Content.Load<Texture2D>("Images/Projectile/bullet2"),
-                bossPos,
-                Boss.Direction.Up,
-                300,
-                15
-            );
-            forestTopMap.AddEnemy(butterflyBoss);
-            forestTopMap.SetBossSpawned();
+            // Automatically spawn bosses for testing.
+            // For GreenForestCentre, spawn a GreenBoss.
+            if (!maps[GameState.GreenForestCentre].BossSpawned)
+            {
+                Vector2 bossPos = new Vector2((maps[GameState.GreenForestCentre].Background.Width - 256) / 2,
+                                              (maps[GameState.GreenForestCentre].Background.Height - 256) / 2);
+                GreenBoss greenBoss = new GreenBoss(
+                    Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                    Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                    Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                    Content.Load<Texture2D>("Images/Projectile/bullet"),
+                    Content.Load<Texture2D>("Images/Projectile/bullet2"),
+                    bossPos,
+                    Boss.Direction.Up,
+                    300,
+                    15
+                );
+                maps[GameState.GreenForestCentre].AddEnemy(greenBoss);
+                maps[GameState.GreenForestCentre].SetBossSpawned();
+            }
+
+            // For ForestTop, spawn the ButterflyBoss.
+            if (!maps[GameState.ForestTop].BossSpawned)
+            {
+                Vector2 bossPos = new Vector2((maps[GameState.ForestTop].Background.Width - 256) / 2,
+                                              (maps[GameState.ForestTop].Background.Height - 256) / 2);
+                Texture2D bossIdle = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossIdle/ButterflyBossIdleUp");
+                Texture2D bossCommon = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
+                ButterflyBoss butterflyBoss = new ButterflyBoss(
+                    bossIdle,
+                    bossCommon,
+                    Content.Load<Texture2D>("Images/Projectile/bullet"),
+                    Content.Load<Texture2D>("Images/Projectile/bullet2"),
+                    bossPos,
+                    Boss.Direction.Up,
+                    300,
+                    15
+                );
+                maps[GameState.ForestTop].AddEnemy(butterflyBoss);
+                maps[GameState.ForestTop].SetBossSpawned();
+            }
 
             // Adjust viewport based on GreenForestCentre background.
             var largestMap = maps[GameState.GreenForestCentre];
@@ -194,7 +217,7 @@ namespace Survivor_of_the_Bulge
             int initialEnemyCount = 2;
             SpawnEnemiesForMap(maps[GameState.GreenForestCentre], initialEnemyCount, enemyBack, enemyFront, enemyLeft, enemyBulletHorizontal, enemyBulletVertical);
 
-            // Set enemy spawn parameters for respawn on all maps.
+            // Set spawn parameters on all maps.
             foreach (var map in maps.Values)
             {
                 map.SetEnemySpawnParameters(enemyBack, enemyFront, enemyLeft, enemyBulletHorizontal, enemyBulletVertical);

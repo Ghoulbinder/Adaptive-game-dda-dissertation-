@@ -6,14 +6,13 @@ namespace Survivor_of_the_Bulge
 {
     public class ButterflyBoss : Boss
     {
-        // Define the animation states for the ButterflyBoss.
-        public enum ButterflyBossState { Idle, Walking, Attack, Death }
+        public enum ButterflyBossState { Idle, Common, Death }
         public ButterflyBossState CurrentState { get; set; } = ButterflyBossState.Idle;
 
-        // The idle animation uses a different sprite sheet.
-        private Texture2D idleTexture; // 1536x1024, 6 columns x 4 rows (24 frames)
-        // The common animation sprite sheet for Attack, Walking and Death.
-        private Texture2D commonTexture; // 1024x1280, 4 columns x 5 rows (20 frames)
+        // Idle texture: 1536x1024, 6 columns x 4 rows (24 frames)
+        private Texture2D idleTexture;
+        // Common texture for Attack, Walking, and Death: 1024x1280, 4 columns x 5 rows (20 frames)
+        private Texture2D commonTexture;
 
         // Animation settings for idle.
         private const int idleFramesPerRow = 6;
@@ -31,9 +30,9 @@ namespace Survivor_of_the_Bulge
         private int currentFrame = 0;
 
         /// <summary>
-        /// Constructs a new ButterflyBoss.
-        /// idleTexture is used for Idle state;
-        /// commonTexture is used for Attack, Walking, and Death states.
+        /// Constructs a ButterflyBoss.
+        /// idleTexture: used for Idle state.
+        /// commonTexture: used for Attack, Walking, and Death.
         /// </summary>
         public ButterflyBoss(
             Texture2D idleTexture, Texture2D commonTexture,
@@ -42,17 +41,12 @@ namespace Survivor_of_the_Bulge
             int health, int bulletDamage)
             : base(idleTexture, idleTexture, idleTexture, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
-            // For the base Boss we pass idleTexture for now.
-            // Store our specialized textures.
             this.idleTexture = idleTexture;
             this.commonTexture = commonTexture;
-
-            // Override boss-specific stats.
             MovementSpeed = 120f;
             FiringInterval = 1.5f;
             BulletRange = 500f;
             CollisionDamage = 30;
-
             CurrentState = ButterflyBossState.Idle;
             currentFrame = 0;
             animationTimer = 0f;
@@ -60,27 +54,12 @@ namespace Survivor_of_the_Bulge
 
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
-            // For testing, we update only the animation.
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             animationTimer += delta;
 
-            float frameTime = 0f;
-            int totalFrames = 0;
-            int framesPerRow = 0;
-
-            // Use idle sprite sheet for Idle; common sprite sheet for other states.
-            if (CurrentState == ButterflyBossState.Idle)
-            {
-                frameTime = idleFrameTime;
-                totalFrames = idleTotalFrames;
-                framesPerRow = idleFramesPerRow;
-            }
-            else
-            {
-                frameTime = commonFrameTime;
-                totalFrames = commonTotalFrames;
-                framesPerRow = commonFramesPerRow;
-            }
+            float frameTime = (CurrentState == ButterflyBossState.Idle) ? idleFrameTime : commonFrameTime;
+            int totalFrames = (CurrentState == ButterflyBossState.Idle) ? idleTotalFrames : commonTotalFrames;
+            int framesPerRow = (CurrentState == ButterflyBossState.Idle) ? idleFramesPerRow : commonFramesPerRow;
 
             if (animationTimer >= frameTime)
             {
@@ -88,9 +67,8 @@ namespace Survivor_of_the_Bulge
                 animationTimer = 0f;
             }
 
-            // You can add AI behavior for movement, attacking, etc. here.
+            // (Optional: Add AI behavior for movement/attack here)
 
-            // Update bullets as usual.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -108,23 +86,21 @@ namespace Survivor_of_the_Bulge
             if (IsDead)
                 return;
 
-            // Select the texture based on state.
             Texture2D currentTexture = (CurrentState == ButterflyBossState.Idle) ? idleTexture : commonTexture;
-
             int textureWidth = currentTexture.Width;
             int textureHeight = currentTexture.Height;
             int frameW, frameH, framesPerRow;
             if (CurrentState == ButterflyBossState.Idle)
             {
                 framesPerRow = idleFramesPerRow;
-                frameW = textureWidth / idleFramesPerRow;    // 1536 / 6 = 256
-                frameH = textureHeight / idleRows;             // 1024 / 4 = 256
+                frameW = textureWidth / idleFramesPerRow;   // 1536 / 6 = 256
+                frameH = textureHeight / idleRows;            // 1024 / 4 = 256
             }
             else
             {
                 framesPerRow = commonFramesPerRow;
-                frameW = textureWidth / commonFramesPerRow;    // 1024 / 4 = 256
-                frameH = textureHeight / commonRows;           // 1280 / 5 = 256
+                frameW = textureWidth / commonFramesPerRow;   // 1024 / 4 = 256
+                frameH = textureHeight / commonRows;          // 1280 / 5 = 256
             }
 
             Rectangle srcRect = new Rectangle((currentFrame % framesPerRow) * frameW,
@@ -132,7 +108,6 @@ namespace Survivor_of_the_Bulge
                                               frameW, frameH);
 
             spriteBatch.Draw(currentTexture, Position, srcRect, Color.White, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
-
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
         }

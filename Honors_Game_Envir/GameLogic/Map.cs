@@ -54,11 +54,11 @@ namespace Survivor_of_the_Bulge
 
         /// <summary>
         /// Call this each update. If there are fewer than 2 enemies and no boss is spawned,
-        /// wait 1 second and then spawn a new enemy.
+        /// wait 1 second and then spawn a new enemy using preset spawn parameters.
         /// </summary>
         public void UpdateRespawn(GameTime gameTime)
         {
-            if (!BossSpawned && Enemies.Count < 2)
+            if (!BossSpawned && Enemies.Count < 2 && enemyBackTexture != null)
             {
                 respawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (respawnTimer >= 1f)
