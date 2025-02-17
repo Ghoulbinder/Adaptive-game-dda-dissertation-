@@ -5,43 +5,30 @@ using System.Diagnostics;
 
 namespace Survivor_of_the_Bulge
 {
-    public class ButterflyBoss : Boss
+    public class DragonBoss : Boss
     {
-        public enum ButterflyBossState { Idle, Walking, Attack, Death }
-        public ButterflyBossState CurrentState { get; private set; } = ButterflyBossState.Idle;
+        public enum DragonBossState { Idle, Walking, Attack, Death }
+        public DragonBossState CurrentState { get; private set; } = DragonBossState.Idle;
         private float stateTimer = 0f;
 
-        // Textures for the ButterflyBoss.
-        // Idle: 1536x1024, 6 columns x 4 rows (24 frames)
+        // Textures: all 1024x1024, 4 rows x 4 columns.
         private Texture2D idleTexture;
-        // Attack: (common) – using the same texture for attack.
         private Texture2D attackTexture;
-        // Walking: (common) – using the same texture for walking.
         private Texture2D walkingTexture;
 
-        // Animation settings for idle.
-        private const int idleFramesPerRow = 6;
-        private const int idleRows = 4;
-        private const int idleTotalFrames = idleFramesPerRow * idleRows; // 24
+        // Animation settings.
+        private const int framesPerRow = 4;
+        private const int rows = 4;
+        private const int bossTotalFrames = framesPerRow * rows; // 16 frames
         private float idleFrameTime = 0.15f;
-
-        // Animation settings for attack/walking (common): assume same dimensions as idle.
-        private float commonFrameTime = 0.08f;
+        private float commonFrameTime = 0.1f; // for walking and attack
 
         private float animTimer = 0f;
         private int frameIndex = 0;
 
-        // Last seen player position for aiming.
         private Vector2 lastTargetPosition;
 
-        /// <summary>
-        /// ButterflyBoss constructor.
-        /// Parameters (9 total):
-        /// idleTexture, attackTexture, walkingTexture,
-        /// bulletHorizontal, bulletVertical,
-        /// startPosition, startDirection, health, bulletDamage.
-        /// </summary>
-        public ButterflyBoss(
+        public DragonBoss(
             Texture2D idleTexture,
             Texture2D attackTexture,
             Texture2D walkingTexture,
@@ -60,7 +47,7 @@ namespace Survivor_of_the_Bulge
             FiringInterval = 1.5f;
             BulletRange = 500f;
             CollisionDamage = 30;
-            CurrentState = ButterflyBossState.Idle;
+            CurrentState = DragonBossState.Idle;
             animTimer = 0f;
             frameIndex = 0;
         }
@@ -72,28 +59,26 @@ namespace Survivor_of_the_Bulge
             lastTargetPosition = playerPosition;
             float distance = Vector2.Distance(Position, playerPosition);
 
-            // Simple FSM: Idle if far, Walking if moderate, Attack if close.
             if (distance > 300)
-                CurrentState = ButterflyBossState.Idle;
+                CurrentState = DragonBossState.Idle;
             else if (distance > 150)
-                CurrentState = ButterflyBossState.Walking;
+                CurrentState = DragonBossState.Walking;
             else
-                CurrentState = ButterflyBossState.Attack;
+                CurrentState = DragonBossState.Attack;
 
-            // Use idle frame time for Idle, common for others.
-            float frameTime = (CurrentState == ButterflyBossState.Idle) ? idleFrameTime : commonFrameTime;
+            float frameTime = (CurrentState == DragonBossState.Idle) ? idleFrameTime : commonFrameTime;
             animTimer += delta;
             if (animTimer >= frameTime)
             {
-                frameIndex = (frameIndex + 1) % idleTotalFrames;
+                frameIndex = (frameIndex + 1) % bossTotalFrames;
                 animTimer = 0f;
             }
 
-            if (CurrentState == ButterflyBossState.Walking)
+            if (CurrentState == DragonBossState.Walking)
             {
                 ChasePlayer(playerPosition);
             }
-            else if (CurrentState == ButterflyBossState.Attack)
+            else if (CurrentState == DragonBossState.Attack)
             {
                 timeSinceLastShot += delta;
                 if (timeSinceLastShot >= FiringInterval)
@@ -120,14 +105,13 @@ namespace Survivor_of_the_Bulge
             if (IsDead)
                 return;
 
-            // Choose texture based on state.
-            Texture2D currentTexture = (CurrentState == ButterflyBossState.Idle) ? idleTexture :
-                                         (CurrentState == ButterflyBossState.Walking) ? walkingTexture :
+            Texture2D currentTexture = (CurrentState == DragonBossState.Idle) ? idleTexture :
+                                         (CurrentState == DragonBossState.Walking) ? walkingTexture :
                                          attackTexture;
-            int frameW = currentTexture.Width / idleFramesPerRow;
-            int frameH = currentTexture.Height / idleRows;
-            Rectangle srcRect = new Rectangle((frameIndex % idleFramesPerRow) * frameW,
-                                              (frameIndex / idleFramesPerRow) * frameH,
+            int frameW = currentTexture.Width / framesPerRow;
+            int frameH = currentTexture.Height / rows;
+            Rectangle srcRect = new Rectangle((frameIndex % framesPerRow) * frameW,
+                                              (frameIndex / framesPerRow) * frameH,
                                               frameW, frameH);
             Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
             spriteBatch.Draw(currentTexture, Position, srcRect, Color.White, 0f, origin, Scale, SpriteEffects.None, 0f);
@@ -140,7 +124,6 @@ namespace Survivor_of_the_Bulge
         {
             get
             {
-                // Fixed small collision box (same as player) centered on the boss.
                 int size = 77;
                 return new Rectangle((int)(Position.X - size / 2), (int)(Position.Y - size / 2), size, size);
             }

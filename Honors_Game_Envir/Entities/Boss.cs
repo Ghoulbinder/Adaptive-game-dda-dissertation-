@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Diagnostics;
 
 namespace Survivor_of_the_Bulge
 {
@@ -9,9 +8,9 @@ namespace Survivor_of_the_Bulge
         public float Scale { get; set; } = 2.0f;
 
         public Boss(Texture2D back, Texture2D front, Texture2D left,
-            Texture2D bulletHorizontal, Texture2D bulletVertical,
-            Vector2 startPosition, Direction startDirection,
-            int health, int bulletDamage)
+                    Texture2D bulletHorizontal, Texture2D bulletVertical,
+                    Vector2 startPosition, Direction startDirection,
+                    int health, int bulletDamage)
             : base(back, front, left, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
             MovementSpeed = 150f;
@@ -20,10 +19,41 @@ namespace Survivor_of_the_Bulge
             CollisionDamage = 30;
         }
 
+        // Overriding the parent's Bounds with center-based logic
+        public override Rectangle Bounds
+        {
+            get
+            {
+                // For typical 4-frame textures
+                int frameW, frameH;
+                if (currentDirection == Direction.Left || currentDirection == Direction.Right)
+                {
+                    frameW = leftTexture.Width / totalFrames;
+                    frameH = leftTexture.Height;
+                }
+                else
+                {
+                    frameW = frontTexture.Width / totalFrames;
+                    frameH = frontTexture.Height;
+                }
+
+                float scaledW = frameW * Scale;
+                float scaledH = frameH * Scale;
+
+                // Position is top-left in base Enemy, but let's do center-based
+                // So we interpret 'Position' as the center
+                return new Rectangle(
+                    (int)(Position.X - scaledW / 2),
+                    (int)(Position.Y - scaledH / 2),
+                    (int)scaledW,
+                    (int)scaledH
+                );
+            }
+        }
+
         public override void Draw(SpriteBatch spriteBatch)
         {
-            if (IsDead)
-                return;
+            if (IsDead) return;
 
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
@@ -43,7 +73,24 @@ namespace Survivor_of_the_Bulge
                     currentTexture = frontTexture;
                     break;
             }
-            spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, Scale, spriteEffects, 0f);
+
+            // sourceRectangle is inherited from Enemy
+            int frameW = currentTexture.Width / totalFrames;
+            int frameH = currentTexture.Height;
+            Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
+
+            spriteBatch.Draw(
+                currentTexture,
+                Position,
+                sourceRectangle,
+                Color.White,
+                0f,
+                origin,
+                Scale,
+                spriteEffects,
+                0f
+            );
+
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
         }

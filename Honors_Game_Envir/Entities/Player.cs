@@ -9,89 +9,92 @@ namespace Survivor_of_the_Bulge
 {
     public class Player
     {
-        // --------------------------
-        // Texture fields.
-        // --------------------------
-        // Idle
-        private Texture2D idleUpTexture;
-        private Texture2D idleDownTexture;
-        private Texture2D idleLeftTexture;
-        private Texture2D idleRightTexture;
+        // Walk textures (used as idle as well)
+        private Texture2D walkUpTexture, walkDownTexture, walkLeftTexture, walkRightTexture;
+        // Attack textures
+        private Texture2D attackUpTexture, attackDownTexture, attackLeftTexture, attackRightTexture;
 
-        // Walk
-        private Texture2D walkUpTexture;
-        private Texture2D walkDownTexture;
-        private Texture2D walkLeftTexture;
-        private Texture2D walkRightTexture;
+        // Bullet textures
+        private Texture2D bulletHorizontalTexture, bulletVerticalTexture;
 
-        // Attack
-        private Texture2D attackUpTexture;
-        private Texture2D attackDownTexture;
-        private Texture2D attackLeftTexture;
-        private Texture2D attackRightTexture;
-
-        // Bullet textures.
-        private Texture2D bulletTexture1; // used for left/right
-        private Texture2D bulletTexture2; // used for up/down
-
-        // Active texture.
+        // The currently active spritesheet.
         private Texture2D activeTexture;
 
-        // --------------------------
-        // Player stats.
-        // --------------------------
-        public PlayerStats Stats { get; private set; }
+        // Center-based position; Position represents the center of the sprite.
         public Vector2 Position;
-        public float FiringInterval { get { return 1f / Stats.AttackSpeed; } }
-        public float BulletRange { get; set; } = 500f;
-        public int Health { get { return Stats.Health; } }
-
         public float Scale { get; set; } = 0.3f;
+        public float MovementSpeed { get; set; } = 200f;
+        // Full duration of an attack cycle (in seconds)
+        public float FiringInterval { get; set; } = 0.8f;
+        // Increased bullet range so that bullets remain visible until they hit the boss.
+        public float BulletRange { get; set; } = 1500f;
 
-        // --------------------------
-        // Animation fields.
-        // --------------------------
-        private float idleFrameTime = 0.15f;
-        private float walkFrameTime = 0.06f;
-        private float baseAttackFrameTime = 0.04f; // will be divided by AttackSpeed
+        // Independent timer for the attack cycle.
+        private float attackCycleTimer = 0f;
+        // Flag to ensure the bullet is fired only once per attack cycle.
+        private bool hasFiredAttack = false;
+
+        private int bulletDamage = 10;
+
+        // Animation fields: each spritesheet is 1536x1024 (6 columns x 4 rows)
+        private float frameTime = 0.1f;
         private float timer = 0f;
         private int frameIndex = 0;
         private const int framesPerRow = 6;
         private const int rows = 4;
-        private int frameWidth;
-        private int frameHeight;
-        private Rectangle sourceRectangle;
+        private int totalFrames => framesPerRow * rows;
+        private Texture2D currentSheet;
 
-        // --------------------------
-        // Bullets.
-        // --------------------------
-        private List<Bullet> bullets;
-        private float bulletSpeed = 500f;
-
-        // --------------------------
-        // Direction and state.
-        // --------------------------
+        // We use two states: Walk (used as idle) and Attack.
         private enum Direction { Up, Down, Left, Right }
+        private enum PlayerState { Walk, Attack }
         private Direction currentDirection = Direction.Down;
-        private enum PlayerState { Idle, Walk, Attack }
-        private PlayerState currentState = PlayerState.Idle;
+        private PlayerState currentState = PlayerState.Walk;
+
+        // Reference to player stats.
+        private PlayerStats stats;
+
+        // List to track bullets fired by the player.
+        private List<Bullet> bullets;
+
+        // Center-based bounding box.
+        public Rectangle Bounds
+        {
+            get
+            {
+                int sheetWidth = currentSheet.Width;
+                int sheetHeight = currentSheet.Height;
+                int frameW = sheetWidth / framesPerRow;
+                int frameH = sheetHeight / rows;
+                float scaledW = frameW * Scale;
+                float scaledH = frameH * Scale;
+                return new Rectangle(
+                    (int)(Position.X - scaledW / 2),
+                    (int)(Position.Y - scaledH / 2),
+                    (int)scaledW,
+                    (int)scaledH
+                );
+            }
+        }
+
+        public int Health => stats.Health;
 
         /// <summary>
-        /// Constructs a new Player using 12 sprite sheets, two bullet textures, starting position, and optional PlayerStats.
+        /// Constructs a new Player.
+        /// Parameters (in order):
+        /// - 4 walk textures (used for both idle and walking)
+        /// - 4 attack textures
+        /// - 2 bullet textures (horizontal and vertical)
+        /// - Start position (Vector2)
+        /// - PlayerStats instance
         /// </summary>
         public Player(
-            Texture2D idleUp, Texture2D idleDown, Texture2D idleLeft, Texture2D idleRight,
             Texture2D walkUp, Texture2D walkDown, Texture2D walkLeft, Texture2D walkRight,
             Texture2D attackUp, Texture2D attackDown, Texture2D attackLeft, Texture2D attackRight,
-            Texture2D bulletTexture1, Texture2D bulletTexture2,
+            Texture2D bulletHorizontal, Texture2D bulletVertical,
             Vector2 startPosition,
-            PlayerStats stats = null)
+            PlayerStats stats)
         {
-            idleUpTexture = idleUp;
-            idleDownTexture = idleDown;
-            idleLeftTexture = idleLeft;
-            idleRightTexture = idleRight;
-
             walkUpTexture = walkUp;
             walkDownTexture = walkDown;
             walkLeftTexture = walkLeft;
@@ -102,173 +105,149 @@ namespace Survivor_of_the_Bulge
             attackLeftTexture = attackLeft;
             attackRightTexture = attackRight;
 
-            this.bulletTexture1 = bulletTexture1;
-            this.bulletTexture2 = bulletTexture2;
+            bulletHorizontalTexture = bulletHorizontal;
+            bulletVerticalTexture = bulletVertical;
+
             Position = startPosition;
-
-            activeTexture = idleDownTexture;
-            currentDirection = Direction.Down;
-            currentState = PlayerState.Idle;
-
-            Stats = stats ?? new PlayerStats(100, 3, 10, 1.0f, 200f, 0, 1, null);
-
-            frameWidth = activeTexture.Width / framesPerRow;
-            frameHeight = activeTexture.Height / rows;
-            sourceRectangle = new Rectangle(0, 0, frameWidth, frameHeight);
+            this.stats = stats;
             bullets = new List<Bullet>();
+
+            // Default state: Walk (used as idle)
+            currentDirection = Direction.Down;
+            currentState = PlayerState.Walk;
+            activeTexture = walkDownTexture;
+            currentSheet = walkDownTexture;
         }
 
-        // Public Bounds property.
-        public Rectangle Bounds
+        public void TakeDamage(int amount)
         {
-            get
+            stats.Health -= amount;
+            Debug.WriteLine($"Player took {amount} damage. Health now: {stats.Health}");
+            if (stats.Health <= 0)
             {
-                int scaledW = (int)(frameWidth * Scale);
-                int scaledH = (int)(frameHeight * Scale);
-                return new Rectangle((int)Position.X, (int)Position.Y, scaledW, scaledH);
+                Debug.WriteLine("Player has died!");
+                // Handle game-over or respawn logic here.
             }
         }
 
         public void Update(GameTime gameTime, Viewport viewport, List<Enemy> enemies)
         {
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            Vector2 movement = Vector2.Zero;
             var keyboard = Keyboard.GetState();
 
-            Vector2 movement = Vector2.Zero;
-            bool isMoving = false;
-
-            // Movement input.
+            // Movement input
             if (keyboard.IsKeyDown(Keys.W))
             {
-                movement.Y -= Stats.MovementSpeed * delta;
+                movement.Y -= MovementSpeed * delta;
                 currentDirection = Direction.Up;
-                isMoving = true;
             }
             else if (keyboard.IsKeyDown(Keys.S))
             {
-                movement.Y += Stats.MovementSpeed * delta;
+                movement.Y += MovementSpeed * delta;
                 currentDirection = Direction.Down;
-                isMoving = true;
             }
             else if (keyboard.IsKeyDown(Keys.A))
             {
-                movement.X -= Stats.MovementSpeed * delta;
+                movement.X -= MovementSpeed * delta;
                 currentDirection = Direction.Left;
-                isMoving = true;
             }
             else if (keyboard.IsKeyDown(Keys.D))
             {
-                movement.X += Stats.MovementSpeed * delta;
+                movement.X += MovementSpeed * delta;
                 currentDirection = Direction.Right;
-                isMoving = true;
             }
 
-            // Attack input.
-            bool isAttacking = keyboard.IsKeyDown(Keys.Space);
+            bool attacking = keyboard.IsKeyDown(Keys.Space);
 
+            // State transition: Attack if space is pressed; otherwise, Walk.
+            if (attacking)
+            {
+                currentState = PlayerState.Attack;
+            }
+            else
+            {
+                currentState = PlayerState.Walk;
+                attackCycleTimer = 0f;
+                hasFiredAttack = false;
+            }
+
+            // Update position (center-based)
             Position += movement;
-            float maxX = viewport.Width - (frameWidth * Scale);
-            float maxY = viewport.Height - (frameHeight * Scale);
-            Position.X = MathHelper.Clamp(Position.X, 0, maxX);
-            Position.Y = MathHelper.Clamp(Position.Y, 0, maxY);
+            int sheetWidth = currentSheet.Width;
+            int sheetHeight = currentSheet.Height;
+            int frameW = sheetWidth / framesPerRow;
+            int frameH = sheetHeight / rows;
+            float halfW = (frameW * Scale) / 2f;
+            float halfH = (frameH * Scale) / 2f;
+            Position.X = MathHelper.Clamp(Position.X, halfW, viewport.Width - halfW);
+            Position.Y = MathHelper.Clamp(Position.Y, halfH, viewport.Height - halfH);
 
-            // State transitions.
-            if (currentState != PlayerState.Attack)
+            // Select active texture based on state and direction.
+            if (currentState == PlayerState.Walk)
             {
-                if (isAttacking)
+                switch (currentDirection)
                 {
-                    currentState = PlayerState.Attack;
-                    frameIndex = 0;
-                }
-                else if (isMoving)
-                {
-                    currentState = PlayerState.Walk;
-                }
-                else
-                {
-                    currentState = PlayerState.Idle;
-                    frameIndex = 0;
-                    timer = 0f;
+                    case Direction.Up: activeTexture = walkUpTexture; break;
+                    case Direction.Down: activeTexture = walkDownTexture; break;
+                    case Direction.Left: activeTexture = walkLeftTexture; break;
+                    case Direction.Right: activeTexture = walkRightTexture; break;
                 }
             }
-
-            // Set active texture.
-            switch (currentState)
+            else if (currentState == PlayerState.Attack)
             {
-                case PlayerState.Idle:
-                    switch (currentDirection)
-                    {
-                        case Direction.Up: activeTexture = idleUpTexture; break;
-                        case Direction.Down: activeTexture = idleDownTexture; break;
-                        case Direction.Left: activeTexture = idleLeftTexture; break;
-                        case Direction.Right: activeTexture = idleRightTexture; break;
-                    }
-                    break;
-                case PlayerState.Walk:
-                    switch (currentDirection)
-                    {
-                        case Direction.Up: activeTexture = walkUpTexture; break;
-                        case Direction.Down: activeTexture = walkDownTexture; break;
-                        case Direction.Left: activeTexture = walkLeftTexture; break;
-                        case Direction.Right: activeTexture = walkRightTexture; break;
-                    }
-                    break;
-                case PlayerState.Attack:
-                    switch (currentDirection)
-                    {
-                        case Direction.Up: activeTexture = attackUpTexture; break;
-                        case Direction.Down: activeTexture = attackDownTexture; break;
-                        case Direction.Left: activeTexture = attackLeftTexture; break;
-                        case Direction.Right: activeTexture = attackRightTexture; break;
-                    }
-                    break;
+                switch (currentDirection)
+                {
+                    case Direction.Up: activeTexture = attackUpTexture; break;
+                    case Direction.Down: activeTexture = attackDownTexture; break;
+                    case Direction.Left: activeTexture = attackLeftTexture; break;
+                    case Direction.Right: activeTexture = attackRightTexture; break;
+                }
             }
+            currentSheet = activeTexture;
 
-            // Choose frame time.
-            float currentFrameTime = 0f;
-            switch (currentState)
-            {
-                case PlayerState.Idle: currentFrameTime = idleFrameTime; break;
-                case PlayerState.Walk: currentFrameTime = walkFrameTime; break;
-                case PlayerState.Attack: currentFrameTime = baseAttackFrameTime / Stats.AttackSpeed; break;
-            }
-
-            if (currentState != PlayerState.Idle)
+            // Animate if in Walk or Attack state.
+            if (currentState == PlayerState.Walk || currentState == PlayerState.Attack)
             {
                 timer += delta;
-                if (timer >= currentFrameTime)
+                if (timer >= frameTime)
                 {
-                    frameIndex = (frameIndex + 1) % (framesPerRow * rows);
+                    frameIndex = (frameIndex + 1) % totalFrames;
                     timer = 0f;
-                    if (currentState == PlayerState.Attack && frameIndex == (framesPerRow * rows) - 1)
-                    {
-                        Shoot();
-                        frameIndex = 0;
-                        currentState = isMoving ? PlayerState.Walk : PlayerState.Idle;
-                    }
                 }
             }
 
-            // Recalculate frame dimensions.
-            frameWidth = activeTexture.Width / framesPerRow;
-            frameHeight = activeTexture.Height / rows;
-            int rowIdx = frameIndex / framesPerRow;
-            int colIdx = frameIndex % framesPerRow;
-            int sx = colIdx * frameWidth;
-            int sy = rowIdx * frameHeight;
-            sourceRectangle = new Rectangle(sx, sy, frameWidth, frameHeight);
-
-            // Update bullets.
-            foreach (var bullet in bullets)
+            // In Attack state, update attack cycle timer and fire bullet at 75% of the cycle.
+            if (currentState == PlayerState.Attack)
             {
-                bullet.Update(gameTime);
+                attackCycleTimer += delta;
+                if (!hasFiredAttack && attackCycleTimer >= (FiringInterval * 0.75f))
+                {
+                    Shoot();
+                    hasFiredAttack = true;
+                }
+                if (attackCycleTimer >= FiringInterval)
+                {
+                    attackCycleTimer = 0f;
+                    hasFiredAttack = false;
+                }
+            }
+            else
+            {
+                attackCycleTimer = 0f;
+                hasFiredAttack = false;
+            }
+
+            // Update bullets and check for collisions with enemies.
+            for (int i = 0; i < bullets.Count; i++)
+            {
+                bullets[i].Update(gameTime);
                 foreach (var enemy in enemies)
                 {
-                    if (bullet.IsActive && enemy.Bounds.Intersects(bullet.Bounds))
+                    if (bullets[i].IsActive && enemy.Bounds.Intersects(bullets[i].Bounds))
                     {
-                        enemy.TakeDamage(bullet.Damage);
-                        bullet.Deactivate();
-                        Stats.IncreaseExperience(10);
+                        enemy.TakeDamage(bulletDamage);
+                        bullets[i].Deactivate();
                     }
                 }
             }
@@ -277,93 +256,71 @@ namespace Survivor_of_the_Bulge
 
         private void Shoot()
         {
-            Vector2 bulletDirection;
-            Vector2 bulletOrigin;
-            SpriteEffects effects = SpriteEffects.None;
+            Vector2 bulletDirection = Vector2.Zero;
+            Texture2D bulletTex = bulletHorizontalTexture;
+            SpriteEffects effect = SpriteEffects.None;
 
-            // Adjust bullet spawn based on direction.
             switch (currentDirection)
             {
                 case Direction.Up:
                     bulletDirection = new Vector2(0, -1);
-                    bulletOrigin = new Vector2(Position.X + (frameWidth * Scale) / 2,
-                                                 Position.Y + (frameHeight * Scale) * 0.3f);
-                    effects = SpriteEffects.None;
+                    bulletTex = bulletVerticalTexture;
                     break;
                 case Direction.Down:
                     bulletDirection = new Vector2(0, 1);
-                    bulletOrigin = new Vector2(Position.X + (frameWidth * Scale) / 2,
-                                                 Position.Y + (frameHeight * Scale) * 0.3f);
-                    effects = SpriteEffects.FlipVertically;
+                    bulletTex = bulletVerticalTexture;
+                    effect = SpriteEffects.FlipVertically;
                     break;
                 case Direction.Left:
                     bulletDirection = new Vector2(-1, 0);
-                    bulletOrigin = new Vector2(Position.X + (frameWidth * Scale) * 0.3f,
-                                                 Position.Y + (frameHeight * Scale) / 2);
-                    effects = SpriteEffects.None;
+                    bulletTex = bulletHorizontalTexture;
+                    effect = SpriteEffects.FlipHorizontally;
                     break;
                 case Direction.Right:
                     bulletDirection = new Vector2(1, 0);
-                    bulletOrigin = new Vector2(Position.X + (frameWidth * Scale) * 0.7f,
-                                                 Position.Y + (frameHeight * Scale) / 2);
-                    effects = SpriteEffects.FlipHorizontally;
-                    break;
-                default:
-                    bulletDirection = new Vector2(1, 0);
-                    bulletOrigin = Position + new Vector2((frameWidth * Scale) / 2, (frameHeight * Scale) / 2);
-                    effects = SpriteEffects.None;
+                    bulletTex = bulletHorizontalTexture;
                     break;
             }
 
-            // Use bulletTexture2 for Up/Down, bulletTexture1 for Left/Right.
-            Texture2D chosenBulletTexture = (currentDirection == Direction.Up || currentDirection == Direction.Down)
-                                              ? bulletTexture2
-                                              : bulletTexture1;
+            // Spawn bullet from the center of the player's sprite.
+            Vector2 bulletPos = Position;
 
-            bullets.Add(new Bullet(
-                chosenBulletTexture,
-                bulletOrigin,
+            Bullet newBullet = new Bullet(
+                bulletTex,
+                bulletPos,
                 bulletDirection,
-                bulletSpeed,
-                Stats.AttackDamage,
-                effects,
+                500f,
+                bulletDamage,
+                effect,
                 BulletRange
-            ));
-        }
-
-        public void TakeDamage(int amount)
-        {
-            Stats.Health -= amount;
-            Debug.WriteLine($"Player took {amount} damage. Health now: {Stats.Health}");
-            if (Stats.Health <= 0)
-            {
-                Stats.Lives--;
-                Debug.WriteLine($"Player lost a life. Lives remaining: {Stats.Lives}");
-                if (Stats.Lives > 0)
-                {
-                    Stats.Health = 100; // Reset health (respawn logic to be handled externally)
-                }
-                else
-                {
-                    Debug.WriteLine("Game Over!");
-                    // Trigger game over logic.
-                }
-            }
+            );
+            bullets.Add(newBullet);
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
+            int sheetW = currentSheet.Width;
+            int sheetH = currentSheet.Height;
+            int frameW = sheetW / framesPerRow;
+            int frameH = sheetH / rows;
+
+            int row = frameIndex / framesPerRow;
+            int col = frameIndex % framesPerRow;
+            Rectangle srcRect = new Rectangle(col * frameW, row * frameH, frameW, frameH);
+            Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
+
             spriteBatch.Draw(
-                activeTexture,
+                currentSheet,
                 Position,
-                sourceRectangle,
+                srcRect,
                 Color.White,
                 0f,
-                Vector2.Zero,
+                origin,
                 Scale,
                 SpriteEffects.None,
                 0f
             );
+
             foreach (var bullet in bullets)
             {
                 bullet.Draw(spriteBatch);

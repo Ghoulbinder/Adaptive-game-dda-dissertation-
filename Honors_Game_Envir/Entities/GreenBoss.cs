@@ -8,12 +8,19 @@ namespace Survivor_of_the_Bulge
     {
         public enum GreenBossState { Idle, Patrol, Chase, Attack, Enraged, Dead }
         public GreenBossState CurrentState { get; private set; } = GreenBossState.Idle;
-        private float stateTimer = 0f; // tracks time in current state
+        private float stateTimer = 0f;
 
-        public GreenBoss(Texture2D back, Texture2D front, Texture2D left,
-            Texture2D bulletHorizontal, Texture2D bulletVertical,
-            Vector2 startPosition, Direction startDirection,
-            int health, int bulletDamage)
+        public GreenBoss(
+            Texture2D back,
+            Texture2D front,
+            Texture2D left,
+            Texture2D bulletHorizontal,
+            Texture2D bulletVertical,
+            Vector2 startPosition,
+            Direction startDirection,
+            int health,
+            int bulletDamage
+        )
             : base(back, front, left, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
             MovementSpeed = 140f;
@@ -39,6 +46,7 @@ namespace Survivor_of_the_Bulge
                         stateTimer = 0f;
                     }
                     break;
+
                 case GreenBossState.Patrol:
                     Patrol(viewport);
                     if (distanceToPlayer < 300)
@@ -47,6 +55,7 @@ namespace Survivor_of_the_Bulge
                         stateTimer = 0f;
                     }
                     break;
+
                 case GreenBossState.Chase:
                     ChasePlayer(playerPosition);
                     if (distanceToPlayer < 150)
@@ -60,6 +69,7 @@ namespace Survivor_of_the_Bulge
                         stateTimer = 0f;
                     }
                     break;
+
                 case GreenBossState.Attack:
                     timeSinceLastShot += delta;
                     if (timeSinceLastShot >= FiringInterval)
@@ -78,6 +88,7 @@ namespace Survivor_of_the_Bulge
                         stateTimer = 0f;
                     }
                     break;
+
                 case GreenBossState.Enraged:
                     MovementSpeed = 180f;
                     FiringInterval = 0.8f;
@@ -97,11 +108,13 @@ namespace Survivor_of_the_Bulge
                         stateTimer = 0f;
                     }
                     break;
+
                 case GreenBossState.Dead:
                     isDead = true;
                     return;
             }
 
+            // Update bullets
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -127,6 +140,7 @@ namespace Survivor_of_the_Bulge
             if (IsDead)
                 return;
 
+            // Draw center-based
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
             switch (currentDirection)
@@ -145,9 +159,48 @@ namespace Survivor_of_the_Bulge
                     currentTexture = frontTexture;
                     break;
             }
-            spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
+
+            int frameW = currentTexture.Width / totalFrames;
+            int frameH = currentTexture.Height;
+            Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
+
+            spriteBatch.Draw(
+                currentTexture,
+                Position,
+                sourceRectangle,
+                Color.White,
+                0f,
+                origin,
+                Scale,
+                spriteEffects,
+                0f
+            );
+
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
+        }
+
+        // If we want center-based collisions
+        public override Rectangle Bounds
+        {
+            get
+            {
+                int frameW = (currentDirection == Direction.Left || currentDirection == Direction.Right)
+                    ? leftTexture.Width / totalFrames
+                    : frontTexture.Width / totalFrames;
+                int frameH = (currentDirection == Direction.Left || currentDirection == Direction.Right)
+                    ? leftTexture.Height
+                    : frontTexture.Height;
+
+                float scaledW = frameW * Scale;
+                float scaledH = frameH * Scale;
+                return new Rectangle(
+                    (int)(Position.X - scaledW / 2),
+                    (int)(Position.Y - scaledH / 2),
+                    (int)scaledW,
+                    (int)scaledH
+                );
+            }
         }
     }
 }
