@@ -11,8 +11,8 @@ namespace Survivor_of_the_Bulge
         MainMenu,
         GreenForestCentre,
         ForestTop,
-        ForestButtom,
         ForestLeft,
+        ForestButtom,
         ForestRight
     }
 
@@ -83,10 +83,11 @@ namespace Survivor_of_the_Bulge
             mainMenuBackground = Content.Load<Texture2D>("Images/Maps/mmBackground2");
             gameFont = Content.Load<SpriteFont>("Fonts/jungleFont");
 
+            // Load bullet textures.
             Texture2D bulletTexture1 = Content.Load<Texture2D>("Images/Projectile/bullet");
             Texture2D bulletTexture2 = Content.Load<Texture2D>("Images/Projectile/bullet2");
 
-            // 12 player textures (using walk textures for idle)
+            // Load player textures (using walk textures for idle and separate attack textures).
             Texture2D walkUp = Content.Load<Texture2D>("Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingUp");
             Texture2D walkDown = Content.Load<Texture2D>("Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingDown");
             Texture2D walkLeft = Content.Load<Texture2D>("Player_Ranged/PlayerRangeWalking/PlayerRangeWalkingLeft");
@@ -97,6 +98,7 @@ namespace Survivor_of_the_Bulge
             Texture2D attackLeft = Content.Load<Texture2D>("Player_Ranged/PlayerRangeAttack/PlayerRangeAttackLeft");
             Texture2D attackRight = Content.Load<Texture2D>("Player_Ranged/PlayerRangeAttack/PlayerRangeAttackRight");
 
+            // Create player stats and instantiate the player.
             PlayerStats stats = new PlayerStats(100, 3, 50, 1.0f, 200f, 0, 1, gameFont);
             player = new Player(
                 walkUp, walkDown, walkLeft, walkRight,
@@ -113,7 +115,7 @@ namespace Survivor_of_the_Bulge
 
             InitializeMaps();
 
-            // Spawn bosses on designated maps.
+            // --- Boss Spawning ---
             // GreenBoss on GreenForestCentre.
             if (!maps[GameState.GreenForestCentre].BossSpawned)
             {
@@ -125,8 +127,7 @@ namespace Survivor_of_the_Bulge
                     Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
                     Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
                     Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                    bulletTexture1,
-                    bulletTexture2,
+                    bulletTexture1, bulletTexture2,
                     bossPos,
                     Boss.Direction.Up,
                     300,
@@ -143,16 +144,17 @@ namespace Survivor_of_the_Bulge
                     (maps[GameState.ForestTop].Background.Width - 256) / 2,
                     (maps[GameState.ForestTop].Background.Height - 256) / 2
                 );
-                Texture2D bossIdle = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossIdle/ButterflyBossIdleUp");
+                // For ButterflyBoss, we now use attack and walking textures (no idle state).
                 Texture2D bossAttack = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
-                // For walking, using same as attack for now.
-                Texture2D bossWalking = bossAttack;
+                Texture2D bossWalking = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossWalking/ButterflyBossWalkingDown");
+                // Load butterfly boss bullet textures.
+                Texture2D butterflyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/butterfly_attack");
+                Texture2D butterflyBulletVertical = Content.Load<Texture2D>("Images/Projectile/butterfly_attack2");
+                // Use the constructor that takes 8 arguments.
                 ButterflyBoss butterflyBoss = new ButterflyBoss(
-                    bossIdle,
                     bossAttack,
                     bossWalking,
-                    bulletTexture1,
-                    bulletTexture2,
+                    butterflyBulletHorizontal, butterflyBulletVertical,
                     bossPos,
                     Boss.Direction.Up,
                     300,
@@ -176,8 +178,7 @@ namespace Survivor_of_the_Bulge
                     dragonIdle,
                     dragonAttack,
                     dragonWalking,
-                    bulletTexture1,
-                    bulletTexture2,
+                    bulletTexture1, bulletTexture2,
                     bossPos,
                     Boss.Direction.Up,
                     300,
@@ -201,8 +202,7 @@ namespace Survivor_of_the_Bulge
                     ogreIdle,
                     ogreAttack,
                     ogreWalking,
-                    bulletTexture1,
-                    bulletTexture2,
+                    bulletTexture1, bulletTexture2,
                     bossPos,
                     Boss.Direction.Up,
                     300,
@@ -222,12 +222,13 @@ namespace Survivor_of_the_Bulge
                 Texture2D spiderIdle = Content.Load<Texture2D>("Spider_Boss/SpiderBossIdle/SpiderBossIdleDown");
                 Texture2D spiderAttack = Content.Load<Texture2D>("Spider_Boss/SpiderBossAttack/SpiderBossAttackDown");
                 Texture2D spiderWalking = Content.Load<Texture2D>("Spider_Boss/SpiderBossWalking/SpiderBossWalkingDown");
+                Texture2D spiderBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/spider_attack");
+                Texture2D spiderBulletVertical = Content.Load<Texture2D>("Images/Projectile/spider_attack2");
                 SpiderBoss spiderBoss = new SpiderBoss(
                     spiderIdle,
                     spiderAttack,
                     spiderWalking,
-                    bulletTexture1,
-                    bulletTexture2,
+                    spiderBulletHorizontal, spiderBulletVertical,
                     bossPos,
                     Boss.Direction.Up,
                     300,
@@ -237,12 +238,13 @@ namespace Survivor_of_the_Bulge
                 maps[GameState.ForestLeft].SetBossSpawned();
             }
 
-            // Adjust viewport based on GreenForestCentre background.
+            // Adjust viewport based on the GreenForestCentre background.
             var largestMap = maps[GameState.GreenForestCentre];
             _graphics.PreferredBackBufferWidth = largestMap.Background.Width;
             _graphics.PreferredBackBufferHeight = largestMap.Background.Height;
             _graphics.ApplyChanges();
 
+            // Load weather textures.
             Texture2D leafTexture = Content.Load<Texture2D>("Images/Maps/tinyleaf");
             Texture2D snowTexture = Content.Load<Texture2D>("Images/Maps/snowFlake");
             int particleCount = 20;

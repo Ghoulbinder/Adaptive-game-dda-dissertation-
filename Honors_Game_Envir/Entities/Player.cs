@@ -9,34 +9,27 @@ namespace Survivor_of_the_Bulge
 {
     public class Player
     {
-        // Walk textures (used as idle as well)
+        // Walk textures (used for both idle and movement)
         private Texture2D walkUpTexture, walkDownTexture, walkLeftTexture, walkRightTexture;
         // Attack textures
         private Texture2D attackUpTexture, attackDownTexture, attackLeftTexture, attackRightTexture;
-
         // Bullet textures
         private Texture2D bulletHorizontalTexture, bulletVerticalTexture;
 
-        // The currently active spritesheet.
+        // The currently active texture (for animation)
         private Texture2D activeTexture;
-
-        // Center-based position; Position represents the center of the sprite.
+        // Position represents the center of the sprite.
         public Vector2 Position;
         public float Scale { get; set; } = 0.3f;
         public float MovementSpeed { get; set; } = 200f;
-        // Full duration of an attack cycle (in seconds)
+        // The interval between shots (in seconds)
         public float FiringInterval { get; set; } = 0.8f;
-        // Increased bullet range so that bullets remain visible until they hit the boss.
+        // Maximum bullet travel distance
         public float BulletRange { get; set; } = 1500f;
-
-        // Independent timer for the attack cycle.
-        private float attackCycleTimer = 0f;
-        // Flag to ensure the bullet is fired only once per attack cycle.
-        private bool hasFiredAttack = false;
-
         private int bulletDamage = 10;
+        private PlayerStats stats;
 
-        // Animation fields: each spritesheet is 1536x1024 (6 columns x 4 rows)
+        // Animation fields (all sheets are 1536x1024: 6 columns x 4 rows)
         private float frameTime = 0.1f;
         private float timer = 0f;
         private int frameIndex = 0;
@@ -44,20 +37,24 @@ namespace Survivor_of_the_Bulge
         private const int rows = 4;
         private int totalFrames => framesPerRow * rows;
         private Texture2D currentSheet;
+        private Rectangle sourceRectangle;
 
-        // We use two states: Walk (used as idle) and Attack.
+        // Define the two states: Walk (which also serves as idle) and Attack.
         private enum Direction { Up, Down, Left, Right }
         private enum PlayerState { Walk, Attack }
         private Direction currentDirection = Direction.Down;
         private PlayerState currentState = PlayerState.Walk;
 
-        // Reference to player stats.
-        private PlayerStats stats;
+        // Timer for continuous fire when Space is held down.
+        private float attackCycleTimer = 0f;
 
-        // List to track bullets fired by the player.
+        // List to hold fired bullets.
         private List<Bullet> bullets;
 
-        // Center-based bounding box.
+        // For detecting key presses.
+        private KeyboardState prevKeyboardState;
+
+        // Expose a center-based bounding box.
         public Rectangle Bounds
         {
             get
@@ -68,25 +65,22 @@ namespace Survivor_of_the_Bulge
                 int frameH = sheetHeight / rows;
                 float scaledW = frameW * Scale;
                 float scaledH = frameH * Scale;
-                return new Rectangle(
-                    (int)(Position.X - scaledW / 2),
-                    (int)(Position.Y - scaledH / 2),
-                    (int)scaledW,
-                    (int)scaledH
-                );
+                return new Rectangle((int)(Position.X - scaledW / 2), (int)(Position.Y - scaledH / 2), (int)scaledW, (int)scaledH);
             }
         }
 
+        // Expose current health.
         public int Health => stats.Health;
 
         /// <summary>
         /// Constructs a new Player.
         /// Parameters (in order):
-        /// - 4 walk textures (used for both idle and walking)
-        /// - 4 attack textures
+        /// - 4 walk textures (Up, Down, Left, Right)
+        /// - 4 attack textures (Up, Down, Left, Right)
         /// - 2 bullet textures (horizontal and vertical)
-        /// - Start position (Vector2)
-        /// - PlayerStats instance
+        /// - A start position (Vector2)
+        /// - A PlayerStats instance
+        /// Total: 16 arguments.
         /// </summary>
         public Player(
             Texture2D walkUp, Texture2D walkDown, Texture2D walkLeft, Texture2D walkRight,
@@ -112,11 +106,13 @@ namespace Survivor_of_the_Bulge
             this.stats = stats;
             bullets = new List<Bullet>();
 
-            // Default state: Walk (used as idle)
+            // Start with Walk state (used as idle) facing Down.
             currentDirection = Direction.Down;
             currentState = PlayerState.Walk;
             activeTexture = walkDownTexture;
             currentSheet = walkDownTexture;
+
+            prevKeyboardState = Keyboard.GetState();
         }
 
         public void TakeDamage(int amount)
@@ -126,7 +122,7 @@ namespace Survivor_of_the_Bulge
             if (stats.Health <= 0)
             {
                 Debug.WriteLine("Player has died!");
-                // Handle game-over or respawn logic here.
+                // Add game-over or respawn logic here.
             }
         }
 
@@ -134,9 +130,9 @@ namespace Survivor_of_the_Bulge
         {
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             Vector2 movement = Vector2.Zero;
-            var keyboard = Keyboard.GetState();
+            KeyboardState keyboard = Keyboard.GetState();
 
-            // Movement input
+            // --- Movement Input ---
             if (keyboard.IsKeyDown(Keys.W))
             {
                 movement.Y -= MovementSpeed * delta;
@@ -158,21 +154,38 @@ namespace Survivor_of_the_Bulge
                 currentDirection = Direction.Right;
             }
 
-            bool attacking = keyboard.IsKeyDown(Keys.Space);
-
-            // State transition: Attack if space is pressed; otherwise, Walk.
-            if (attacking)
+            // --- Firing Input ---
+            // If Space is pressed (or held), fire immediately on press and then continuously at the firing interval.
+            if (keyboard.IsKeyDown(Keys.Space))
             {
+                // If space was just pressed, fire immediately.
+                if (!prevKeyboardState.IsKeyDown(Keys.Space))
+                {
+                    Shoot();
+                    attackCycleTimer = 0f;
+                }
+                else
+                {
+                    attackCycleTimer += delta;
+                    if (attackCycleTimer >= FiringInterval)
+                    {
+                        Shoot();
+                        attackCycleTimer -= FiringInterval;
+                    }
+                }
                 currentState = PlayerState.Attack;
             }
             else
             {
-                currentState = PlayerState.Walk;
-                attackCycleTimer = 0f;
-                hasFiredAttack = false;
+                // When Space is released, return to Walk state.
+                if (currentState == PlayerState.Attack)
+                {
+                    currentState = PlayerState.Walk;
+                    attackCycleTimer = 0f;
+                }
             }
 
-            // Update position (center-based)
+            // --- Update Position ---
             Position += movement;
             int sheetWidth = currentSheet.Width;
             int sheetHeight = currentSheet.Height;
@@ -183,7 +196,7 @@ namespace Survivor_of_the_Bulge
             Position.X = MathHelper.Clamp(Position.X, halfW, viewport.Width - halfW);
             Position.Y = MathHelper.Clamp(Position.Y, halfH, viewport.Height - halfH);
 
-            // Select active texture based on state and direction.
+            // --- Select Active Texture Based on State and Direction ---
             if (currentState == PlayerState.Walk)
             {
                 switch (currentDirection)
@@ -206,7 +219,7 @@ namespace Survivor_of_the_Bulge
             }
             currentSheet = activeTexture;
 
-            // Animate if in Walk or Attack state.
+            // --- Animation Update ---
             if (currentState == PlayerState.Walk || currentState == PlayerState.Attack)
             {
                 timer += delta;
@@ -216,77 +229,64 @@ namespace Survivor_of_the_Bulge
                     timer = 0f;
                 }
             }
-
-            // In Attack state, update attack cycle timer and fire bullet at 75% of the cycle.
-            if (currentState == PlayerState.Attack)
-            {
-                attackCycleTimer += delta;
-                if (!hasFiredAttack && attackCycleTimer >= (FiringInterval * 0.75f))
-                {
-                    Shoot();
-                    hasFiredAttack = true;
-                }
-                if (attackCycleTimer >= FiringInterval)
-                {
-                    attackCycleTimer = 0f;
-                    hasFiredAttack = false;
-                }
-            }
             else
             {
-                attackCycleTimer = 0f;
-                hasFiredAttack = false;
+                frameIndex = 0;
             }
+            int col = frameIndex % framesPerRow;
+            int row = frameIndex / framesPerRow;
+            sourceRectangle = new Rectangle(col * frameW, row * frameH, frameW, frameH);
 
-            // Update bullets and check for collisions with enemies.
-            for (int i = 0; i < bullets.Count; i++)
+            // --- Update Bullets ---
+            foreach (var bullet in bullets)
             {
-                bullets[i].Update(gameTime);
+                bullet.Update(gameTime);
                 foreach (var enemy in enemies)
                 {
-                    if (bullets[i].IsActive && enemy.Bounds.Intersects(bullets[i].Bounds))
+                    if (bullet.IsActive && enemy.Bounds.Intersects(bullet.Bounds))
                     {
                         enemy.TakeDamage(bulletDamage);
-                        bullets[i].Deactivate();
+                        bullet.Deactivate();
                     }
                 }
             }
             bullets.RemoveAll(b => !b.IsActive);
+
+            // Save current keyboard state.
+            prevKeyboardState = keyboard;
         }
 
         private void Shoot()
         {
-            Vector2 bulletDirection = Vector2.Zero;
-            Texture2D bulletTex = bulletHorizontalTexture;
+            // Determine bullet texture, direction, and sprite effects based on player's facing direction.
+            Texture2D bulletToUse = null;
             SpriteEffects effect = SpriteEffects.None;
-
+            Vector2 bulletDirection = Vector2.Zero;
             switch (currentDirection)
             {
                 case Direction.Up:
                     bulletDirection = new Vector2(0, -1);
-                    bulletTex = bulletVerticalTexture;
+                    bulletToUse = bulletVerticalTexture;
                     break;
                 case Direction.Down:
                     bulletDirection = new Vector2(0, 1);
-                    bulletTex = bulletVerticalTexture;
+                    bulletToUse = bulletVerticalTexture;
                     effect = SpriteEffects.FlipVertically;
                     break;
                 case Direction.Left:
                     bulletDirection = new Vector2(-1, 0);
-                    bulletTex = bulletHorizontalTexture;
+                    bulletToUse = bulletHorizontalTexture;
                     effect = SpriteEffects.FlipHorizontally;
                     break;
                 case Direction.Right:
                     bulletDirection = new Vector2(1, 0);
-                    bulletTex = bulletHorizontalTexture;
+                    bulletToUse = bulletHorizontalTexture;
                     break;
             }
-
-            // Spawn bullet from the center of the player's sprite.
+            // Spawn bullet from the player's center.
             Vector2 bulletPos = Position;
-
             Bullet newBullet = new Bullet(
-                bulletTex,
+                bulletToUse,
                 bulletPos,
                 bulletDirection,
                 500f,
@@ -303,23 +303,12 @@ namespace Survivor_of_the_Bulge
             int sheetH = currentSheet.Height;
             int frameW = sheetW / framesPerRow;
             int frameH = sheetH / rows;
-
-            int row = frameIndex / framesPerRow;
             int col = frameIndex % framesPerRow;
+            int row = frameIndex / framesPerRow;
             Rectangle srcRect = new Rectangle(col * frameW, row * frameH, frameW, frameH);
             Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
 
-            spriteBatch.Draw(
-                currentSheet,
-                Position,
-                srcRect,
-                Color.White,
-                0f,
-                origin,
-                Scale,
-                SpriteEffects.None,
-                0f
-            );
+            spriteBatch.Draw(currentSheet, Position, srcRect, Color.White, 0f, origin, Scale, SpriteEffects.None, 0f);
 
             foreach (var bullet in bullets)
             {

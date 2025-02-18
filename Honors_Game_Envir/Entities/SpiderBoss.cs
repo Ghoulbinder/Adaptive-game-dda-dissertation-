@@ -11,57 +11,63 @@ namespace Survivor_of_the_Bulge
         public SpiderBossState CurrentState { get; private set; } = SpiderBossState.Idle;
         private float stateTimer = 0f;
 
-        // Spider Boss textures:
-        // Attack: 1280x1280, 4 columns x 4 rows (16 frames)
+        // Boss animation textures:
+        // Attack texture: 1280x1280, 4 columns x 4 rows (16 frames)
         private Texture2D attackTexture;
-        // Idle: 1280x960, 4 columns x 3 rows (12 frames)
-        private Texture2D idleTexture;
-        // Walking: 960x960, 3 columns x 3 rows (9 frames)
+        // Walking texture: 960x960, 3 columns x 3 rows (9 frames)
         private Texture2D walkingTexture;
 
         // Animation settings for Attack.
         private const int attackFramesPerRow = 4;
         private const int attackRows = 4;
-        private const int bossTotalFrames_Attack = attackFramesPerRow * attackRows; // 16 frames
+        private const int totalFrames_Attack = attackFramesPerRow * attackRows;
         private float attackFrameTime = 0.1f;
-
-        // Animation settings for Idle.
-        private const int idleFramesPerRow = 4;
-        private const int idleRows = 3;
-        private const int bossTotalFrames_Idle = idleFramesPerRow * idleRows; // 12 frames
-        private float idleFrameTime = 0.15f;
 
         // Animation settings for Walking.
         private const int walkingFramesPerRow = 3;
         private const int walkingRows = 3;
-        private const int bossTotalFrames_Walking = walkingFramesPerRow * walkingRows; // 9 frames
+        private const int totalFrames_Walking = walkingFramesPerRow * walkingRows;
         private float walkingFrameTime = 0.1f;
 
         private float animTimer = 0f;
         private int frameIndex = 0;
 
+        // Last known target position (used for aiming/rotation).
         private Vector2 lastTargetPosition;
 
+        /// <summary>
+        /// Constructs a new SpiderBoss.
+        /// Parameters:
+        /// 1. idleTexture: (passed to base; not used directly here)
+        /// 2. attackTexture: Attack sprite sheet (1280x1280, 4x4)
+        /// 3. walkingTexture: Walking sprite sheet (960x960, 3x3)
+        /// 4. spiderBulletHorizontal: Bullet texture for horizontal attack (e.g., "Images/Projectile/spider_attack")
+        /// 5. spiderBulletVertical: Bullet texture for vertical attack (e.g., "Images/Projectile/spider_attack2")
+        /// 6. startPosition: Starting position
+        /// 7. startDirection: Initial direction (Boss.Direction)
+        /// 8. health: Health value
+        /// 9. bulletDamage: Bullet damage value
+        /// </summary>
         public SpiderBoss(
             Texture2D idleTexture,
             Texture2D attackTexture,
             Texture2D walkingTexture,
-            Texture2D bulletHorizontal,
-            Texture2D bulletVertical,
+            Texture2D spiderBulletHorizontal,
+            Texture2D spiderBulletVertical,
             Vector2 startPosition,
             Direction startDirection,
             int health,
             int bulletDamage)
-            : base(idleTexture, idleTexture, idleTexture, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
+            : base(idleTexture, idleTexture, idleTexture, spiderBulletHorizontal, spiderBulletVertical, startPosition, startDirection, health, bulletDamage)
         {
-            this.idleTexture = idleTexture;
             this.attackTexture = attackTexture;
             this.walkingTexture = walkingTexture;
             MovementSpeed = 110f;
             FiringInterval = 1.3f;
             BulletRange = 500f;
             CollisionDamage = 25;
-            CurrentState = SpiderBossState.Idle;
+            // Default state: Walking.
+            CurrentState = SpiderBossState.Walking;
             animTimer = 0f;
             frameIndex = 0;
         }
@@ -73,43 +79,45 @@ namespace Survivor_of_the_Bulge
             lastTargetPosition = playerPosition;
             float distance = Vector2.Distance(Position, playerPosition);
 
-            if (distance > 300)
-                CurrentState = SpiderBossState.Idle;
-            else if (distance > 150)
-                CurrentState = SpiderBossState.Walking;
-            else
+            // Set state based on distance.
+            if (distance >= 200)
                 CurrentState = SpiderBossState.Attack;
+            else
+                CurrentState = SpiderBossState.Walking;
 
+            // In Attack state, update currentDirection based on player's relative position.
+            if (CurrentState == SpiderBossState.Attack)
+            {
+                Vector2 diff = playerPosition - Position;
+                if (diff != Vector2.Zero)
+                {
+                    diff.Normalize();
+                    // Determine dominant axis to set a cardinal direction.
+                    if (Math.Abs(diff.X) > Math.Abs(diff.Y))
+                        currentDirection = diff.X < 0 ? Direction.Left : Direction.Right;
+                    else
+                        currentDirection = diff.Y < 0 ? Direction.Up : Direction.Down;
+                }
+            }
+
+            // Select animation parameters.
             float frameTime;
             int totalFrames;
-            int framesPerRowLocal = 0;
+            int framesPerRowUsed;
             Texture2D currentTexture;
-            switch (CurrentState)
+            if (CurrentState == SpiderBossState.Attack)
             {
-                case SpiderBossState.Idle:
-                    currentTexture = idleTexture;
-                    framesPerRowLocal = idleFramesPerRow;
-                    totalFrames = bossTotalFrames_Idle;
-                    frameTime = idleFrameTime;
-                    break;
-                case SpiderBossState.Walking:
-                    currentTexture = walkingTexture;
-                    framesPerRowLocal = walkingFramesPerRow;
-                    totalFrames = bossTotalFrames_Walking;
-                    frameTime = walkingFrameTime;
-                    break;
-                case SpiderBossState.Attack:
-                    currentTexture = attackTexture;
-                    framesPerRowLocal = attackFramesPerRow;
-                    totalFrames = bossTotalFrames_Attack;
-                    frameTime = attackFrameTime;
-                    break;
-                default:
-                    currentTexture = idleTexture;
-                    framesPerRowLocal = idleFramesPerRow;
-                    totalFrames = bossTotalFrames_Idle;
-                    frameTime = idleFrameTime;
-                    break;
+                currentTexture = attackTexture;
+                framesPerRowUsed = attackFramesPerRow;
+                totalFrames = totalFrames_Attack;
+                frameTime = attackFrameTime;
+            }
+            else // Walking state.
+            {
+                currentTexture = walkingTexture;
+                framesPerRowUsed = walkingFramesPerRow;
+                totalFrames = totalFrames_Walking;
+                frameTime = walkingFrameTime;
             }
             animTimer += delta;
             if (animTimer >= frameTime)
@@ -118,20 +126,30 @@ namespace Survivor_of_the_Bulge
                 animTimer = 0f;
             }
 
+            // Behavior.
             if (CurrentState == SpiderBossState.Walking)
             {
-                ChasePlayer(playerPosition);
+                Vector2 diff = playerPosition - Position;
+                if (diff != Vector2.Zero)
+                {
+                    diff.Normalize();
+                    Position += diff * MovementSpeed * 0.02f;
+                }
             }
             else if (CurrentState == SpiderBossState.Attack)
             {
                 timeSinceLastShot += delta;
                 if (timeSinceLastShot >= FiringInterval)
                 {
-                    Shoot();
+                    if (distance >= 200)
+                    {
+                        Shoot();
+                    }
                     timeSinceLastShot = 0f;
                 }
             }
 
+            // Update bullets.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -146,40 +164,36 @@ namespace Survivor_of_the_Bulge
 
         public override void Draw(SpriteBatch spriteBatch)
         {
-            if (IsDead) return;
+            if (IsDead)
+                return;
 
             Texture2D currentTexture;
-            int framesPerRowLocal, rowsLocal;
-            switch (CurrentState)
+            int framesPerRowUsed, rowsUsed;
+            if (CurrentState == SpiderBossState.Attack)
             {
-                case SpiderBossState.Idle:
-                    currentTexture = idleTexture;
-                    framesPerRowLocal = idleFramesPerRow;
-                    rowsLocal = idleRows;
-                    break;
-                case SpiderBossState.Walking:
-                    currentTexture = walkingTexture;
-                    framesPerRowLocal = walkingFramesPerRow;
-                    rowsLocal = walkingRows;
-                    break;
-                case SpiderBossState.Attack:
-                    currentTexture = attackTexture;
-                    framesPerRowLocal = attackFramesPerRow;
-                    rowsLocal = attackRows;
-                    break;
-                default:
-                    currentTexture = idleTexture;
-                    framesPerRowLocal = idleFramesPerRow;
-                    rowsLocal = idleRows;
-                    break;
+                currentTexture = attackTexture;
+                framesPerRowUsed = attackFramesPerRow;
+                rowsUsed = attackRows;
             }
-            int frameW = currentTexture.Width / framesPerRowLocal;
-            int frameH = currentTexture.Height / rowsLocal;
-            Rectangle srcRect = new Rectangle((frameIndex % framesPerRowLocal) * frameW,
-                                              (frameIndex / framesPerRowLocal) * frameH,
+            else
+            {
+                currentTexture = walkingTexture;
+                framesPerRowUsed = walkingFramesPerRow;
+                rowsUsed = walkingRows;
+            }
+            int frameW = currentTexture.Width / framesPerRowUsed;
+            int frameH = currentTexture.Height / rowsUsed;
+            Rectangle srcRect = new Rectangle((frameIndex % framesPerRowUsed) * frameW,
+                                              (frameIndex / framesPerRowUsed) * frameH,
                                               frameW, frameH);
+
+            // Rotate sprite so it faces the player.
+            Vector2 diff = lastTargetPosition - Position;
+            float angle = 0f;
+            if (diff != Vector2.Zero)
+                angle = (float)Math.Atan2(diff.Y, diff.X) - MathHelper.PiOver2;
             Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
-            spriteBatch.Draw(currentTexture, Position, srcRect, Color.White, 0f, origin, Scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(currentTexture, Position, srcRect, Color.White, angle, origin, Scale, SpriteEffects.None, 0f);
 
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
@@ -196,21 +210,45 @@ namespace Survivor_of_the_Bulge
 
         protected override void Shoot()
         {
-            Vector2 direction = lastTargetPosition - Position;
-            if (direction != Vector2.Zero)
-                direction.Normalize();
-            else
-                direction = new Vector2(1, 0);
-            Vector2 bulletPos = Position;
-            bullets.Add(new Bullet(
-                bulletHorizontalTexture,
+            // Use currentDirection set in Update.
+            Vector2 direction;
+            switch (currentDirection)
+            {
+                case Direction.Left:
+                    direction = new Vector2(-1, 0);
+                    break;
+                case Direction.Right:
+                    direction = new Vector2(1, 0);
+                    break;
+                case Direction.Up:
+                    direction = new Vector2(0, -1);
+                    break;
+                case Direction.Down:
+                    direction = new Vector2(0, 1);
+                    break;
+                default:
+                    direction = new Vector2(1, 0);
+                    break;
+            }
+
+            // Set sprite effects: flip horizontally for left, vertically for down.
+            SpriteEffects effect = SpriteEffects.None;
+            if (currentDirection == Direction.Left)
+                effect = SpriteEffects.FlipHorizontally;
+            else if (currentDirection == Direction.Down)
+                effect = SpriteEffects.FlipVertically;
+
+            Vector2 bulletPos = Position + direction * 20f;
+            Bullet bullet = new Bullet(
+                (currentDirection == Direction.Left || currentDirection == Direction.Right) ? bulletHorizontalTexture : bulletVerticalTexture,
                 bulletPos,
                 direction,
                 500f,
                 BulletDamage,
-                SpriteEffects.None,
-                BulletRange
-            ));
+                effect,
+                10000f // Large range so bullet only deactivates off-screen.
+            );
+            bullets.Add(bullet);
         }
     }
 }

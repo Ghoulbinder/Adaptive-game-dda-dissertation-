@@ -1,26 +1,31 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Survivor_of_the_Bulge
 {
     public class Map
     {
-        public Texture2D Background { get; }
-        public List<Enemy> Enemies { get; }
-        public int KillCount { get; private set; } = 0;
-        public bool BossSpawned { get; private set; } = false;
+        // The map's background texture.
+        public Texture2D Background { get; private set; }
+        // List of enemies on this map.
+        public List<Enemy> Enemies { get; private set; }
 
-        // Spawn parameters for respawning new enemies.
-        private Texture2D enemyBackTexture;
-        private Texture2D enemyFrontTexture;
-        private Texture2D enemyLeftTexture;
+        // Internal flag and counter for boss spawning and enemy kills.
+        private bool bossSpawned = false;
+        private int killCount = 0;
+
+        // Respawn timer and interval (in seconds).
+        private float respawnTimer = 0f;
+        private float respawnInterval = 1f; // New enemy spawns 1 second after a kill (if needed).
+
+        // Stored enemy spawn parameters so we can respawn new enemies.
+        private Texture2D enemyBack;
+        private Texture2D enemyFront;
+        private Texture2D enemyLeft;
         private Texture2D enemyBulletHorizontal;
         private Texture2D enemyBulletVertical;
-
-        // Timer for enemy respawn.
-        private float respawnTimer = 0f;
 
         public Map(Texture2D background, List<Enemy> enemies)
         {
@@ -28,72 +33,91 @@ namespace Survivor_of_the_Bulge
             Enemies = enemies;
         }
 
-        public void AddEnemy(Enemy enemy)
+        /// <summary>
+        /// Adds an enemy to the map.
+        /// </summary>
+        public void AddEnemy(Enemy e)
         {
-            Enemies.Add(enemy);
-        }
-
-        public void SetEnemySpawnParameters(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletH, Texture2D bulletV)
-        {
-            enemyBackTexture = back;
-            enemyFrontTexture = front;
-            enemyLeftTexture = left;
-            enemyBulletHorizontal = bulletH;
-            enemyBulletVertical = bulletV;
-        }
-
-        public void IncrementKillCount()
-        {
-            KillCount++;
-        }
-
-        public void SetBossSpawned()
-        {
-            BossSpawned = true;
+            Enemies.Add(e);
         }
 
         /// <summary>
-        /// Call this each update. If there are fewer than 2 enemies and spawn parameters are set,
-        /// wait 1 second and then spawn a new enemy.
+        /// Marks that the boss has been spawned on this map.
+        /// </summary>
+        public void SetBossSpawned()
+        {
+            bossSpawned = true;
+        }
+
+        /// <summary>
+        /// Gets whether the boss has been spawned.
+        /// </summary>
+        public bool BossSpawned => bossSpawned;
+
+        /// <summary>
+        /// Increments the enemy kill count.
+        /// </summary>
+        public void IncrementKillCount()
+        {
+            killCount++;
+        }
+
+        /// <summary>
+        /// Returns the current kill count.
+        /// </summary>
+        public int KillCount => killCount;
+
+        /// <summary>
+        /// Checks the respawn timer and, if fewer than 2 enemies are present, spawns a new enemy after the respawn interval.
         /// </summary>
         public void UpdateRespawn(GameTime gameTime)
         {
-            if (!BossSpawned && Enemies.Count < 2 && enemyBackTexture != null)
+            respawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // If there are less than 2 enemies and the respawn interval has passed, spawn a new enemy.
+            if (Enemies.Count < 2 && respawnTimer >= respawnInterval)
             {
-                respawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (respawnTimer >= 1f)
+                if (enemyBack != null && enemyFront != null && enemyLeft != null &&
+                    enemyBulletHorizontal != null && enemyBulletVertical != null)
                 {
                     Random rng = new Random();
-                    int enemyWidth = enemyLeftTexture.Width / 4; // approximate frame width
-                    int enemyHeight = enemyLeftTexture.Height;
-                    int x = rng.Next(0, Math.Max(1, Background.Width - enemyWidth));
-                    int y = rng.Next(0, Math.Max(1, Background.Height - enemyHeight));
-                    Array directions = Enum.GetValues(typeof(Enemy.Direction));
-                    Enemy.Direction dir = (Enemy.Direction)directions.GetValue(rng.Next(directions.Length));
+                    int x = rng.Next(0, Math.Max(1, Background.Width - enemyLeft.Width / 4));
+                    int y = rng.Next(0, Math.Max(1, Background.Height - enemyLeft.Height));
+                    Array dirs = Enum.GetValues(typeof(Enemy.Direction));
+                    Enemy.Direction dir = (Enemy.Direction)dirs.GetValue(rng.Next(dirs.Length));
+
                     int baseHealth = 50;
                     int baseDamage = 5;
-                    int enemyHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
-                    int enemyDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
+                    int finalHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
+                    int finalDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
 
-                    Enemy newEnemy = new Enemy(
-                        enemyBackTexture,
-                        enemyFrontTexture,
-                        enemyLeftTexture,
+                    Enemy e = new Enemy(
+                        enemyBack,
+                        enemyFront,
+                        enemyLeft,
                         enemyBulletHorizontal,
                         enemyBulletVertical,
                         new Vector2(x, y),
                         dir,
-                        enemyHealth,
-                        enemyDamage
+                        finalHealth,
+                        finalDamage
                     );
-                    Enemies.Add(newEnemy);
-                    respawnTimer = 0f;
+                    AddEnemy(e);
                 }
-            }
-            else
-            {
                 respawnTimer = 0f;
             }
+        }
+
+        /// <summary>
+        /// Stores the enemy textures and bullet textures for respawning.
+        /// </summary>
+        public void SetEnemySpawnParameters(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical)
+        {
+            enemyBack = back;
+            enemyFront = front;
+            enemyLeft = left;
+            enemyBulletHorizontal = bulletHorizontal;
+            enemyBulletVertical = bulletVertical;
         }
     }
 }
