@@ -11,22 +11,20 @@ namespace Survivor_of_the_Bulge
         public ButterflyBossState CurrentState { get; private set; } = ButterflyBossState.Walking;
         private float stateTimer = 0f;
 
-        // Textures for the ButterflyBoss:
-        // Attack texture: 1024x1280, 4 columns x 5 rows (20 frames)
+        // Textures for the ButterflyBoss.
         private Texture2D attackTexture;
-        // Walking texture: 1024x1280, 4 columns x 5 rows (20 frames)
         private Texture2D walkingTexture;
 
         // Animation settings for Attack.
         private const int attackFramesPerRow = 4;
         private const int attackRows = 5;
-        private const int attackTotalFrames = attackFramesPerRow * attackRows; // 20 frames
+        private const int attackTotalFrames = attackFramesPerRow * attackRows;
         private float attackFrameTime = 0.08f;
 
         // Animation settings for Walking.
         private const int walkingFramesPerRow = 4;
         private const int walkingRows = 5;
-        private const int walkingTotalFrames = walkingFramesPerRow * walkingRows; // 20 frames
+        private const int walkingTotalFrames = walkingFramesPerRow * walkingRows;
         private float walkingFrameTime = 0.08f;
 
         private float animTimer = 0f;
@@ -40,11 +38,7 @@ namespace Survivor_of_the_Bulge
         private Texture2D butterflyBulletVertical;
 
         /// <summary>
-        /// Constructs a ButterflyBoss with no idle state.
-        /// Parameters (8 total):
-        /// attackTexture, walkingTexture,
-        /// bulletHorizontal, bulletVertical,
-        /// startPosition, startDirection, health, bulletDamage.
+        /// Constructs a ButterflyBoss.
         /// </summary>
         public ButterflyBoss(
             Texture2D attackTexture,
@@ -68,6 +62,10 @@ namespace Survivor_of_the_Bulge
             CurrentState = ButterflyBossState.Walking;
             animTimer = 0f;
             frameIndex = 0;
+
+            // **** Experience gain modification: set boss exp reward ****
+            this.ExperienceReward = 50;
+            // **** End modification ****
         }
 
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
@@ -77,13 +75,11 @@ namespace Survivor_of_the_Bulge
             lastTargetPosition = playerPosition;
             float distance = Vector2.Distance(Position, playerPosition);
 
-            // FSM: if distance > 200, remain in Walking; otherwise, switch to Attack.
             if (distance > 200)
                 CurrentState = ButterflyBossState.Walking;
             else
                 CurrentState = ButterflyBossState.Attack;
 
-            // Select animation parameters based on state.
             float frameTime;
             int totalFrames;
             int framesPerRowUsed;
@@ -93,7 +89,7 @@ namespace Survivor_of_the_Bulge
                 totalFrames = attackTotalFrames;
                 framesPerRowUsed = attackFramesPerRow;
             }
-            else // Walking state.
+            else
             {
                 frameTime = walkingFrameTime;
                 totalFrames = walkingTotalFrames;
@@ -106,7 +102,6 @@ namespace Survivor_of_the_Bulge
                 animTimer = 0f;
             }
 
-            // Behavior.
             if (CurrentState == ButterflyBossState.Walking)
             {
                 ChasePlayer(playerPosition);
@@ -121,7 +116,6 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            // Update bullets.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -132,6 +126,13 @@ namespace Survivor_of_the_Bulge
                 }
             }
             bullets.RemoveAll(b => !b.IsActive);
+
+            // **** Award experience on death ****
+            if (IsDead)
+            {
+                AwardExperience(player);
+            }
+            // **** End modification ****
         }
 
         public override void Draw(SpriteBatch spriteBatch)
@@ -147,7 +148,7 @@ namespace Survivor_of_the_Bulge
                 framesPerRowUsed = attackFramesPerRow;
                 rowsUsed = attackRows;
             }
-            else // Walking.
+            else
             {
                 currentTexture = walkingTexture;
                 framesPerRowUsed = walkingFramesPerRow;
@@ -163,44 +164,6 @@ namespace Survivor_of_the_Bulge
 
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
-        }
-
-        public override Rectangle Bounds
-        {
-            get
-            {
-                int size = 77; // Fixed collision box size (same as player's) centered on the boss.
-                return new Rectangle((int)(Position.X - size / 2), (int)(Position.Y - size / 2), size, size);
-            }
-        }
-
-        protected override void Shoot()
-        {
-            Vector2 diff = lastTargetPosition - Position;
-            if (diff != Vector2.Zero)
-                diff.Normalize();
-            else
-                diff = new Vector2(1, 0);
-
-            Texture2D chosenBulletTexture = (Math.Abs(diff.X) >= Math.Abs(diff.Y)) ? butterflyBulletHorizontal : butterflyBulletVertical;
-
-            SpriteEffects effect = SpriteEffects.None;
-            if (diff.X < 0)
-                effect = SpriteEffects.FlipHorizontally;
-            if (diff.Y > 0)
-                effect = SpriteEffects.FlipVertically;
-
-            Vector2 bulletPos = Position + diff * 20f;
-            Bullet bullet = new Bullet(
-                chosenBulletTexture,
-                bulletPos,
-                diff,
-                500f,
-                BulletDamage,
-                effect,
-                10000f // Large range so bullet only deactivates off-screen.
-            );
-            bullets.Add(bullet);
         }
     }
 }

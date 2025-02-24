@@ -11,48 +11,43 @@ namespace Survivor_of_the_Bulge
         public OgreBossState CurrentState { get; private set; } = OgreBossState.Idle;
         private float stateTimer = 0f;
 
-        // Directional textures for Idle, Attack, and Walking animations.
+        // Directional textures.
         private Texture2D idleUpTexture, idleDownTexture, idleLeftTexture, idleRightTexture;
         private Texture2D attackUpTexture, attackDownTexture, attackLeftTexture, attackRightTexture;
         private Texture2D walkingUpTexture, walkingDownTexture, walkingLeftTexture, walkingRightTexture;
 
-        // Animation settings for Idle and Attack (common dimensions: 1024x1280, 4 frames per row, 5 rows → 20 frames total)
+        // Animation settings for Idle and Attack.
         private const int commonFramesPerRow = 4;
         private const int commonRows = 5;
-        private int TotalFrames_Common => commonFramesPerRow * commonRows; // 20 frames
+        private int TotalFrames_Common => commonFramesPerRow * commonRows;
         private float idleFrameTime = 0.15f;
         private float attackFrameTime = 0.1f;
 
-        // Animation settings for Walking (assumed dimensions: 1024x1024, 4 frames per row, 4 rows → 16 frames total)
+        // Animation settings for Walking.
         private const int walkingFramesPerRow = 4;
         private const int walkingRows = 4;
-        private int TotalFrames_Walking => walkingFramesPerRow * walkingRows; // 16 frames
+        private int TotalFrames_Walking => walkingFramesPerRow * walkingRows;
         private float walkingFrameTime = 0.1f;
 
         private float animTimer = 0f;
         private int frameIndex = 0;
 
         // Behavior variables.
-        private bool isAggro = false;            // Becomes true when the boss takes damage.
-        private float meleeThreshold = 150f;       // Distance at which the boss considers itself "in range" to attack.
-        private float runSpeedMultiplier = 2.0f;   // Multiplier when chasing aggressively.
-        private int meleeDamage = 25;              // Damage dealt by a melee attack.
-        private float resetDuration = 2f;          // Duration after an attack before resetting.
+        private bool isAggro = false;
+        private float meleeThreshold = 150f;
+        private float runSpeedMultiplier = 2.0f;
+        private int meleeDamage = 25;
+        private float resetDuration = 2f;
         private float resetTimer = 0f;
 
-        // For melee attack: store the attack target and locked facing.
-        private Vector2 attackTarget;            // The player's position when the boss first becomes aggro.
-        private Vector2 lastTargetPosition;      // Last known player position (updated in Idle if not locked).
-        private float fixedAngle = 0f;           // The angle locked at the moment of attack.
-        private bool idleAngleLocked = false;    // When true, the boss does not update its idle angle.
+        // For melee attack.
+        private Vector2 attackTarget;
+        private Vector2 lastTargetPosition;
+        private float fixedAngle = 0f;
+        private bool idleAngleLocked = false;
 
         /// <summary>
-        /// Constructs an OgreBoss with separate directional textures for Idle, Attack, and Walking.
-        /// Requires 16 texture arguments:
-        /// Idle: idleUp, idleDown, idleLeft, idleRight.
-        /// Attack: attackUp, attackDown, attackLeft, attackRight.
-        /// Walking: walkingUp, walkingDown, walkingLeft, walkingRight.
-        /// Plus bullet textures (unused for melee but required by base), startPosition, startDirection, health, and bulletDamage.
+        /// Constructs an OgreBoss.
         /// </summary>
         public OgreBoss(
             Texture2D idleUp, Texture2D idleDown, Texture2D idleLeft, Texture2D idleRight,
@@ -63,7 +58,6 @@ namespace Survivor_of_the_Bulge
             int health, int bulletDamage)
             : base(idleDown, idleDown, idleDown, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
-            // Store directional textures.
             idleUpTexture = idleUp;
             idleDownTexture = idleDown;
             idleLeftTexture = idleLeft;
@@ -84,6 +78,10 @@ namespace Survivor_of_the_Bulge
             CurrentState = OgreBossState.Idle;
             animTimer = 0f;
             frameIndex = 0;
+
+            // **** Experience gain modification: set boss exp reward ****
+            this.ExperienceReward = 50;
+            // **** End modification ****
         }
 
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
@@ -91,7 +89,6 @@ namespace Survivor_of_the_Bulge
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             stateTimer += delta;
 
-            // In Idle state, if not locked, update lastTargetPosition and fixedAngle.
             if (CurrentState == OgreBossState.Idle && !idleAngleLocked)
             {
                 lastTargetPosition = playerPosition;
@@ -101,14 +98,12 @@ namespace Survivor_of_the_Bulge
 
             float distance = Vector2.Distance(Position, playerPosition);
 
-            // State transitions.
             if (!isAggro)
             {
                 CurrentState = OgreBossState.Idle;
             }
             else
             {
-                // When first damaged, lock the attack target and fixed angle.
                 if (CurrentState == OgreBossState.Idle)
                 {
                     attackTarget = playerPosition;
@@ -118,7 +113,6 @@ namespace Survivor_of_the_Bulge
                 }
                 if (CurrentState == OgreBossState.Aggro)
                 {
-                    // Move toward the stored attack target.
                     Vector2 diff = attackTarget - Position;
                     if (diff != Vector2.Zero)
                     {
@@ -138,7 +132,6 @@ namespace Survivor_of_the_Bulge
                     timeSinceLastShot += delta;
                     if (timeSinceLastShot >= FiringInterval)
                     {
-                        // Perform melee attack if in collision.
                         if (Bounds.Intersects(player.Bounds))
                         {
                             player.TakeDamage(meleeDamage);
@@ -160,13 +153,11 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            // Animation update.
             float frameTime;
             int totalFrames;
             int framesPerRowLocal;
             Texture2D currentTexture;
 
-            // Choose directional textures based on the locked fixed angle.
             float angleDeg = MathHelper.ToDegrees(fixedAngle);
             Texture2D chosenIdle, chosenAttack, chosenWalking;
             if (angleDeg >= 45 && angleDeg < 135)
@@ -208,7 +199,7 @@ namespace Survivor_of_the_Bulge
                 totalFrames = TotalFrames_Walking;
                 frameTime = walkingFrameTime;
             }
-            else // Attack or Reset.
+            else
             {
                 currentTexture = chosenAttack;
                 framesPerRowLocal = commonFramesPerRow;
@@ -223,7 +214,6 @@ namespace Survivor_of_the_Bulge
                 animTimer = 0f;
             }
 
-            // Update bullets (if any).
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -241,7 +231,6 @@ namespace Survivor_of_the_Bulge
             if (IsDead)
                 return;
 
-            // Choose directional textures based on fixedAngle.
             float angleDeg = MathHelper.ToDegrees(fixedAngle);
             Texture2D chosenIdle, chosenAttack, chosenWalking;
             if (angleDeg >= 45 && angleDeg < 135)
@@ -296,7 +285,6 @@ namespace Survivor_of_the_Bulge
                                               (frameIndex / framesPerRowLocal) * frameH,
                                               frameW, frameH);
             Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
-            // No rotation applied because textures are directional.
             spriteBatch.Draw(currentTexture, Position, srcRect, Color.White, 0f, origin, Scale, SpriteEffects.None, 0f);
 
             foreach (var bullet in bullets)
@@ -312,9 +300,9 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        public override void TakeDamage(int amount)
+        public override void TakeDamage(int amount, Player player)
         {
-            base.TakeDamage(amount);
+            base.TakeDamage(amount, player);
             if (amount > 0 && CurrentState == OgreBossState.Idle)
             {
                 isAggro = true;

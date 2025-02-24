@@ -74,13 +74,6 @@ namespace Survivor_of_the_Bulge
 
         /// <summary>
         /// Constructs a new Player.
-        /// Parameters (in order):
-        /// - 4 walk textures (Up, Down, Left, Right)
-        /// - 4 attack textures (Up, Down, Left, Right)
-        /// - 2 bullet textures (horizontal and vertical)
-        /// - A start position (Vector2)
-        /// - A PlayerStats instance
-        /// Total: 16 arguments.
         /// </summary>
         public Player(
             Texture2D walkUp, Texture2D walkDown, Texture2D walkLeft, Texture2D walkRight,
@@ -126,6 +119,12 @@ namespace Survivor_of_the_Bulge
             }
         }
 
+        // Method to gain experience.
+        public void GainExperience(int amount)
+        {
+            stats.IncreaseExperience(amount);
+        }
+
         public void Update(GameTime gameTime, Viewport viewport, List<Enemy> enemies)
         {
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -155,10 +154,8 @@ namespace Survivor_of_the_Bulge
             }
 
             // --- Firing Input ---
-            // If Space is pressed (or held), fire immediately on press and then continuously at the firing interval.
             if (keyboard.IsKeyDown(Keys.Space))
             {
-                // If space was just pressed, fire immediately.
                 if (!prevKeyboardState.IsKeyDown(Keys.Space))
                 {
                     Shoot();
@@ -177,7 +174,6 @@ namespace Survivor_of_the_Bulge
             }
             else
             {
-                // When Space is released, return to Walk state.
                 if (currentState == PlayerState.Attack)
                 {
                     currentState = PlayerState.Walk;
@@ -243,9 +239,10 @@ namespace Survivor_of_the_Bulge
                 bullet.Update(gameTime);
                 foreach (var enemy in enemies)
                 {
+                    // Pass 'this' to enemy.TakeDamage so the enemy can award experience upon death.
                     if (bullet.IsActive && enemy.Bounds.Intersects(bullet.Bounds))
                     {
-                        enemy.TakeDamage(bulletDamage);
+                        enemy.TakeDamage(bulletDamage, this);
                         bullet.Deactivate();
                     }
                 }
@@ -258,7 +255,6 @@ namespace Survivor_of_the_Bulge
 
         private void Shoot()
         {
-            // Determine bullet texture, direction, and sprite effects based on player's facing direction.
             Texture2D bulletToUse = null;
             SpriteEffects effect = SpriteEffects.None;
             Vector2 bulletDirection = Vector2.Zero;
@@ -283,7 +279,6 @@ namespace Survivor_of_the_Bulge
                     bulletToUse = bulletHorizontalTexture;
                     break;
             }
-            // Spawn bullet from the player's center.
             Vector2 bulletPos = Position;
             Bullet newBullet = new Bullet(
                 bulletToUse,

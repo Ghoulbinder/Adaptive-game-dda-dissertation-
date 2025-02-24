@@ -38,6 +38,10 @@ namespace Survivor_of_the_Bulge
             CollisionDamage = 35;
             CurrentState = GreenBossState.Idle;
             stateTimer = 0f;
+
+            // **** Experience gain modification: set boss exp reward ****
+            this.ExperienceReward = 50;
+            // **** End modification ****
         }
 
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
@@ -47,7 +51,6 @@ namespace Survivor_of_the_Bulge
             lastTargetPosition = playerPosition;
             float distance = Vector2.Distance(Position, playerPosition);
 
-            // Aggro mode: if the boss has been damaged, it locks onto the attack target.
             if (isAggro)
             {
                 if (Vector2.Distance(Position, attackTarget) > shootingRange)
@@ -71,7 +74,6 @@ namespace Survivor_of_the_Bulge
                     {
                         Shoot();
                         timeSinceLastShot = 0f;
-                        // Reset aggro after attack.
                         isAggro = false;
                         CurrentState = GreenBossState.Idle;
                         stateTimer = 0f;
@@ -80,11 +82,9 @@ namespace Survivor_of_the_Bulge
             }
             else
             {
-                // Normal behavior.
                 if (distance <= shootingRange)
                 {
                     CurrentState = GreenBossState.Attack;
-                    // Update direction to face the player.
                     Vector2 diff = playerPosition - Position;
                     if (diff != Vector2.Zero)
                     {
@@ -112,7 +112,6 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            // Animation update (assuming base Boss manages timer, frameTime, currentFrame, totalFrames, etc.)
             timer += delta;
             if (timer >= frameTime)
             {
@@ -121,7 +120,6 @@ namespace Survivor_of_the_Bulge
             }
             UpdateFrameDimensions();
 
-            // Update boss bullets.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -134,9 +132,9 @@ namespace Survivor_of_the_Bulge
             bullets.RemoveAll(b => !b.IsActive);
         }
 
-        public override void TakeDamage(int amount)
+        public override void TakeDamage(int amount, Player player)
         {
-            base.TakeDamage(amount);
+            base.TakeDamage(amount, player);
             if (amount > 0)
             {
                 // When hit, lock the current player position and enter aggro mode.
@@ -147,7 +145,6 @@ namespace Survivor_of_the_Bulge
 
         protected override void Shoot()
         {
-            // Determine direction based on currentDirection.
             Vector2 direction = Vector2.Zero;
             switch (currentDirection)
             {
@@ -156,7 +153,7 @@ namespace Survivor_of_the_Bulge
                 case Direction.Left: direction = new Vector2(-1, 0); break;
                 case Direction.Right: direction = new Vector2(1, 0); break;
             }
-            Vector2 bulletPos = Position + direction * 20f; // Offset from boss center.
+            Vector2 bulletPos = Position + direction * 20f;
             Bullet bullet = new Bullet(bulletHorizontalTexture, bulletPos, direction, 500f, BulletDamage, SpriteEffects.None, BulletRange);
             bullets.Add(bullet);
         }

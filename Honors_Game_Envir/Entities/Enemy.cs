@@ -54,17 +54,30 @@ namespace Survivor_of_the_Bulge
 
         protected const int CollisionPadding = 5;
 
-        // Define thresholds (these values mimic a mini-GreenBoss)
+        // Define thresholds.
         protected float shootingRange = 200f; // if player is within 200 pixels, attack
         protected float chaseRange = 400f;    // if player is between 200 and 400, chase
-        // (Below 200, enemy attacks; above 400, enemy patrols.)
 
-        // Basic bounding box – you can later add center-based logic if needed.
+        // **** Experience gain modifications ****
+        public int ExperienceReward { get; set; } = 10; // Default exp reward for regular enemy
+        private bool experienceAwarded = false;         // Ensure exp is awarded only once
+
+        // Award experience to the player when the enemy dies.
+        protected void AwardExperience(Player player)
+        {
+            if (!experienceAwarded)
+            {
+                player.GainExperience(ExperienceReward);
+                experienceAwarded = true;
+            }
+        }
+        // **** End modifications ****
+
+        // Basic bounding box.
         public virtual Rectangle Bounds
         {
             get
             {
-                // Use the top-left and the source rectangle dimensions.
                 return new Rectangle((int)Position.X, (int)Position.Y, sourceRectangle.Width, sourceRectangle.Height);
             }
         }
@@ -89,7 +102,6 @@ namespace Survivor_of_the_Bulge
             Health = health;
             BulletDamage = bulletDamage;
 
-            // Set default values.
             MovementSpeed = 100f;
             bulletSpeed = 300f;
             frameTime = 0.1f;
@@ -97,7 +109,6 @@ namespace Survivor_of_the_Bulge
             timeSinceLastShot = 0f;
             collisionDamageTimer = 0f;
             currentFrame = 0;
-            // Initialize the source rectangle based on the leftTexture.
             int frameW = leftTexture.Width / totalFrames;
             sourceRectangle = new Rectangle(0, 0, frameW, leftTexture.Height);
 
@@ -106,21 +117,17 @@ namespace Survivor_of_the_Bulge
         }
 
         /// <summary>
-        /// Update the enemy’s behavior using a finite state machine.
-        /// Mimics a “mini GreenBoss”:
-        /// - If the player is within shootingRange, switch to Attack and shoot.
-        /// - If the player is between shootingRange and chaseRange, chase.
-        /// - Otherwise, patrol.
+        /// Update the enemy’s behavior.
         /// </summary>
         public virtual void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
+            // If already dead, nothing to update.
             if (isDead)
                 return;
 
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             float distance = Vector2.Distance(Position, playerPosition);
 
-            // Update FSM state based on player distance.
             if (distance <= shootingRange)
             {
                 currentState = EnemyState.Attack;
@@ -134,7 +141,6 @@ namespace Survivor_of_the_Bulge
                 currentState = EnemyState.Patrol;
             }
 
-            // Execute behavior based on state.
             switch (currentState)
             {
                 case EnemyState.Patrol:
@@ -151,10 +157,8 @@ namespace Survivor_of_the_Bulge
                         timeSinceLastShot = 0f;
                     }
                     break;
-                    // Idle state can be added if needed.
             }
 
-            // Update animation timer.
             timer += delta;
             if (timer >= frameTime)
             {
@@ -163,7 +167,6 @@ namespace Survivor_of_the_Bulge
             }
             UpdateFrameDimensions();
 
-            // Update bullets and check collision with the player.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -177,12 +180,11 @@ namespace Survivor_of_the_Bulge
         }
 
         /// <summary>
-        /// Update the source rectangle based on the current animation frame.
+        /// Update the source rectangle based on the current frame.
         /// </summary>
         protected virtual void UpdateFrameDimensions()
         {
             int textureWidth = 0, textureHeight = 0;
-            // Choose the texture based on the current direction.
             switch (currentDirection)
             {
                 case Direction.Up:
@@ -205,21 +207,25 @@ namespace Survivor_of_the_Bulge
         }
 
         /// <summary>
-        /// Basic damage handler.
+        /// Inflict damage on the enemy and award experience if killed.
         /// </summary>
-        public virtual void TakeDamage(int amount)
+        public virtual void TakeDamage(int amount, Player player)
         {
+            if (isDead)
+                return;
+
             Health -= amount;
             if (Health <= 0)
             {
                 isDead = true;
                 currentState = EnemyState.Dead;
                 Debug.WriteLine("Enemy died!");
+                AwardExperience(player);
             }
         }
 
         /// <summary>
-        /// Draw the enemy using its current animation frame.
+        /// Draw the enemy.
         /// </summary>
         public virtual void Draw(SpriteBatch spriteBatch)
         {
@@ -251,21 +257,12 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        // Helper behavior methods:
-
-        /// <summary>
-        /// Patrol behavior – you can implement your own logic here.
-        /// For now, this method does nothing.
-        /// </summary>
+        // Helper methods for enemy behavior.
         protected virtual void Patrol(Viewport viewport)
         {
             // Implement patrol behavior if desired.
-            // For example, move back and forth along a set path.
         }
 
-        /// <summary>
-        /// Chase the player by moving toward the player's current position.
-        /// </summary>
         protected virtual void ChasePlayer(Vector2 playerPosition)
         {
             Vector2 directionVector = playerPosition - Position;
@@ -273,7 +270,6 @@ namespace Survivor_of_the_Bulge
             {
                 Vector2 moveDir = Vector2.Normalize(directionVector);
                 Position += moveDir * MovementSpeed * 0.02f;
-                // Update the current direction based on the dominant axis.
                 if (Math.Abs(moveDir.X) > Math.Abs(moveDir.Y))
                     currentDirection = moveDir.X < 0 ? Direction.Left : Direction.Right;
                 else
@@ -281,12 +277,8 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        /// <summary>
-        /// Shoot a projectile.
-        /// </summary>
         protected virtual void Shoot()
         {
-            // For this example, choose the bullet texture based on the enemy’s current facing.
             Vector2 bulletDirection;
             switch (currentDirection)
             {
@@ -306,7 +298,6 @@ namespace Survivor_of_the_Bulge
                     bulletDirection = new Vector2(1, 0);
                     break;
             }
-            // Place the bullet starting roughly at the center of the enemy.
             Vector2 bulletPos = Position + new Vector2(sourceRectangle.Width / 2f, sourceRectangle.Height / 2f);
             Bullet bullet = new Bullet(
                 (currentDirection == Direction.Left || currentDirection == Direction.Right) ? bulletHorizontalTexture : bulletVerticalTexture,
