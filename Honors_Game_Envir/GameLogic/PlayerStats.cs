@@ -5,46 +5,45 @@ namespace Survivor_of_the_Bulge
 {
     public class PlayerStats
     {
-        public int Health { get; set; }
-        public int Lives { get; set; }
-        public int AttackDamage { get; set; }  // For testing, set to 50 so one shot kills an enemy.
-        public float AttackSpeed { get; set; } // Shots per second.
-        public float MovementSpeed { get; set; }
-        public int Experience { get; set; }
-        public int Level { get; set; }
-        public int LevelUpThreshold { get; set; } = 100;
+        public int Health { get; private set; }
+        public int Lives { get; private set; }
+        public int AttackDamage { get; private set; }
+        public float AttackSpeed { get; private set; }
+        public float MovementSpeed { get; private set; }
+        public int Experience { get; private set; }
+        public int Level { get; private set; }
 
-        private SpriteFont font;
+        private SpriteFont statFont;
 
-        public PlayerStats(int health, int lives, int attackDamage, float attackSpeed, float movementSpeed, int experience, int level, SpriteFont font)
+        /// <summary>
+        /// Constructs a new PlayerStats object.
+        /// Parameters: health, lives, attackDamage, attackSpeed, movementSpeed, experience, level, and the stat display font.
+        /// </summary>
+        public PlayerStats(int health, int lives, int attackDamage, float attackSpeed, float movementSpeed, int experience, int level, SpriteFont statFont)
         {
             Health = health;
             Lives = lives;
-            AttackDamage = attackDamage; // Set to 50 for one-hit kills.
+            AttackDamage = attackDamage;
             AttackSpeed = attackSpeed;
             MovementSpeed = movementSpeed;
             Experience = experience;
             Level = level;
-            this.font = font;
+            this.statFont = statFont;
         }
 
         public void IncreaseExperience(int amount)
         {
             Experience += amount;
-            if (Experience >= Level * LevelUpThreshold)
+            if (Experience >= Level * 100)
             {
-                LevelUp();
+                Level++;
+                Experience = 0;
+                // Increase health, movement speed, attack damage, and optionally adjust attack speed.
+                Health += 20;
+                MovementSpeed += 10f;
+                AttackDamage += 5;
+                AttackSpeed += 0.1f;
             }
-        }
-
-        private void LevelUp()
-        {
-            Level++;
-            Experience = 0;
-            AttackDamage += 2;
-            AttackSpeed += 0.1f;
-            MovementSpeed += 10f;
-            Health += 20;
         }
 
         public void UpdateHealth(int newHealth)
@@ -55,7 +54,7 @@ namespace Survivor_of_the_Bulge
         public void Draw(SpriteBatch spriteBatch, Vector2 position)
         {
             string statsText = $"Health: {Health}\nLives: {Lives}\nAttack Damage: {AttackDamage}\nAttack Speed: {AttackSpeed}\nMovement Speed: {MovementSpeed}\nExp: {Experience}\nLevel: {Level}";
-            spriteBatch.DrawString(font, statsText, position, Color.Black);
+            spriteBatch.DrawString(statFont, statsText, position, Color.Black);
         }
     }
 }

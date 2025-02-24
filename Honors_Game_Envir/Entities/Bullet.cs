@@ -1,24 +1,25 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 
 namespace Survivor_of_the_Bulge
 {
     public class Bullet
     {
         public Vector2 Position { get; private set; }
-        protected Vector2 direction;
-        protected float speed;
-        protected int damage;
-        protected Texture2D texture;
-        protected Rectangle sourceRectangle;
-        protected bool isActive;
-        protected SpriteEffects spriteEffects;
-        protected Vector2 startPosition;
+        private Vector2 direction;
+        private float speed;
+        private int damage;
+        private Texture2D texture;
+        private Rectangle sourceRectangle;
+        private bool isActive;
+        private SpriteEffects spriteEffects;
+        private float maxRange;
+        private Vector2 startPosition;
 
         public bool IsActive => isActive;
-        // Added public Damage property so that other classes can access bullet damage.
         public int Damage => damage;
-        public virtual Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, texture.Width, texture.Height);
+        public Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, texture.Width, texture.Height);
 
         public Bullet(Texture2D texture, Vector2 startPosition, Vector2 direction, float speed, int damage, SpriteEffects spriteEffects, float maxRange)
         {
@@ -30,26 +31,28 @@ namespace Survivor_of_the_Bulge
             this.damage = damage;
             isActive = true;
             this.spriteEffects = spriteEffects;
-            // We ignore maxRange now so bullets only disappear when off-screen.
+            this.maxRange = maxRange;
             sourceRectangle = new Rectangle(0, 0, texture.Width, texture.Height);
         }
 
-        public virtual void Update(GameTime gameTime)
+        public void Update(GameTime gameTime)
         {
             Position += direction * speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            // Deactivate bullet if it goes off screen (assuming a screen size of 1600x980).
-            if (Position.X < 0 || Position.X > 1600 || Position.Y < 0 || Position.Y > 980)
+            if (Vector2.Distance(Position, startPosition) > maxRange ||
+                Position.X < 0 || Position.X > 1600 || Position.Y < 0 || Position.Y > 980)
+            {
                 Deactivate();
+            }
         }
 
-        public virtual void Deactivate()
+        public void Deactivate()
         {
             isActive = false;
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch)
         {
-            if (IsActive)
+            if (isActive)
                 spriteBatch.Draw(texture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
         }
     }

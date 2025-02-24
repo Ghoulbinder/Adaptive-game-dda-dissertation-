@@ -1,78 +1,53 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Survivor_of_the_Bulge
 {
-    public enum GameState
-    {
-        MainMenu,
-        GreenForestCentre,
-        ForestTop,
-        ForestLeft,
-        ForestButtom,
-        ForestRight
-    }
-
     public class Enemy
     {
-        // Textures for movement – these are the “enemy” sprites.
         protected Texture2D backTexture, frontTexture, leftTexture;
         protected Texture2D bulletHorizontalTexture, bulletVerticalTexture;
-
         public Vector2 Position;
         public float MovementSpeed { get; set; } = 100f;
         public int Health { get; protected set; }
         public int BulletDamage { get; set; } = 5;
-        public float FiringInterval { get; set; } = 2f; // seconds between shots
-        public float BulletRange { get; set; } = 1000f; // extended range so bullets only disappear off screen
+        public float FiringInterval { get; set; } = 2f;
+        public float BulletRange { get; set; } = 400f;
         public int CollisionDamage { get; set; } = 15;
         public float CollisionDamageInterval { get; set; } = 1f;
-
-        // FSM timers.
         protected float timeSinceLastShot = 0f;
         protected float collisionDamageTimer = 0f;
-
-        // Animation fields.
         protected Rectangle sourceRectangle;
-        protected float frameTime = 0.1f; // seconds per frame (can be adjusted per state if desired)
+        protected float frameTime = 0.1f;
         protected float timer = 0f;
-        protected int currentFrame = 0;
-        protected int totalFrames = 4; // e.g. 4 frames per animation
-        // List of bullets fired by this enemy.
+        protected int currentFrame;
+        protected int totalFrames = 4; // typical 4-frame animation
         protected List<Bullet> bullets;
         protected float bulletSpeed = 300f;
-
-        // Finite State Machine for the enemy.
-        public enum EnemyState { Idle, Patrol, Chase, Attack, Dead }
-        public enum Direction { Left, Right, Up, Down }
         protected EnemyState currentState;
+        protected float shootingCooldown;
+        protected float shootingTimer;
+        protected bool isDead = false;
+
+        public enum EnemyState { Idle, Patrol, Chase, Shoot, Charge, Flee, Dead }
+        public enum Direction { Left, Right, Up, Down }
         protected Direction currentDirection;
 
         protected const int CollisionPadding = 5;
 
-        // Define thresholds (these values mimic a mini-GreenBoss)
-        protected float shootingRange = 200f; // if player is within 200 pixels, attack
-        protected float chaseRange = 400f;    // if player is between 200 and 400, chase
-        // (Below 200, enemy attacks; above 400, enemy patrols.)
-
-        // Basic bounding box – you can later add center-based logic if needed.
+        // Basic top–left bounding box; you can override this in boss classes if needed.
         public virtual Rectangle Bounds
         {
             get
             {
-                // Use the top-left and the source rectangle dimensions.
                 return new Rectangle((int)Position.X, (int)Position.Y, sourceRectangle.Width, sourceRectangle.Height);
             }
         }
 
         public bool IsDead => isDead;
-        protected bool isDead = false;
 
-        // Constructor.
         public Enemy(Texture2D back, Texture2D front, Texture2D left,
                      Texture2D bulletHorizontal, Texture2D bulletVertical,
                      Vector2 startPosition, Direction startDirection,
@@ -83,13 +58,11 @@ namespace Survivor_of_the_Bulge
             leftTexture = left;
             bulletHorizontalTexture = bulletHorizontal;
             bulletVerticalTexture = bulletVertical;
-
             Position = startPosition;
             currentDirection = startDirection;
             Health = health;
             BulletDamage = bulletDamage;
 
-            // Set default values.
             MovementSpeed = 100f;
             bulletSpeed = 300f;
             frameTime = 0.1f;
@@ -97,64 +70,22 @@ namespace Survivor_of_the_Bulge
             timeSinceLastShot = 0f;
             collisionDamageTimer = 0f;
             currentFrame = 0;
-            // Initialize the source rectangle based on the leftTexture.
             int frameW = leftTexture.Width / totalFrames;
             sourceRectangle = new Rectangle(0, 0, frameW, leftTexture.Height);
-
             bullets = new List<Bullet>();
             currentState = EnemyState.Patrol;
         }
 
-        /// <summary>
-        /// Update the enemy’s behavior using a finite state machine.
-        /// Mimics a “mini GreenBoss”:
-        /// - If the player is within shootingRange, switch to Attack and shoot.
-        /// - If the player is between shootingRange and chaseRange, chase.
-        /// - Otherwise, patrol.
-        /// </summary>
         public virtual void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
-            if (isDead)
-                return;
+            if (isDead) return;
 
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            float distance = Vector2.Distance(Position, playerPosition);
+            float distanceToPlayer = Vector2.Distance(Position, playerPosition);
 
-            // Update FSM state based on player distance.
-            if (distance <= shootingRange)
-            {
-                currentState = EnemyState.Attack;
-            }
-            else if (distance <= chaseRange)
-            {
-                currentState = EnemyState.Chase;
-            }
-            else
-            {
-                currentState = EnemyState.Patrol;
-            }
+            // (AI behavior for a generic enemy can go here)
 
-            // Execute behavior based on state.
-            switch (currentState)
-            {
-                case EnemyState.Patrol:
-                    Patrol(viewport);
-                    break;
-                case EnemyState.Chase:
-                    ChasePlayer(playerPosition);
-                    break;
-                case EnemyState.Attack:
-                    timeSinceLastShot += delta;
-                    if (timeSinceLastShot >= FiringInterval)
-                    {
-                        Shoot();
-                        timeSinceLastShot = 0f;
-                    }
-                    break;
-                    // Idle state can be added if needed.
-            }
-
-            // Update animation timer.
+            // Update animation
             timer += delta;
             if (timer >= frameTime)
             {
@@ -163,7 +94,7 @@ namespace Survivor_of_the_Bulge
             }
             UpdateFrameDimensions();
 
-            // Update bullets and check collision with the player.
+            // Update bullets
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -176,13 +107,9 @@ namespace Survivor_of_the_Bulge
             bullets.RemoveAll(b => !b.IsActive);
         }
 
-        /// <summary>
-        /// Update the source rectangle based on the current animation frame.
-        /// </summary>
         protected virtual void UpdateFrameDimensions()
         {
             int textureWidth = 0, textureHeight = 0;
-            // Choose the texture based on the current direction.
             switch (currentDirection)
             {
                 case Direction.Up:
@@ -204,9 +131,6 @@ namespace Survivor_of_the_Bulge
             sourceRectangle = new Rectangle(currentFrame * frameW, 0, frameW, frameH);
         }
 
-        /// <summary>
-        /// Basic damage handler.
-        /// </summary>
         public virtual void TakeDamage(int amount)
         {
             Health -= amount;
@@ -214,18 +138,12 @@ namespace Survivor_of_the_Bulge
             {
                 isDead = true;
                 currentState = EnemyState.Dead;
-                Debug.WriteLine("Enemy died!");
             }
         }
 
-        /// <summary>
-        /// Draw the enemy using its current animation frame.
-        /// </summary>
         public virtual void Draw(SpriteBatch spriteBatch)
         {
-            if (isDead)
-                return;
-
+            if (isDead) return;
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
             switch (currentDirection)
@@ -246,78 +164,39 @@ namespace Survivor_of_the_Bulge
             }
             spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
             foreach (var bullet in bullets)
-            {
                 bullet.Draw(spriteBatch);
-            }
         }
 
-        // Helper behavior methods:
-
-        /// <summary>
-        /// Patrol behavior – you can implement your own logic here.
-        /// For now, this method does nothing.
-        /// </summary>
+        // NEW: Helper method for patrolling.
         protected virtual void Patrol(Viewport viewport)
         {
-            // Implement patrol behavior if desired.
-            // For example, move back and forth along a set path.
+            if (currentDirection == Direction.Left)
+            {
+                Position.X -= MovementSpeed * 0.02f;
+                if (Position.X < 0) currentDirection = Direction.Right;
+            }
+            else if (currentDirection == Direction.Right)
+            {
+                Position.X += MovementSpeed * 0.02f;
+                if (Position.X > viewport.Width - sourceRectangle.Width) currentDirection = Direction.Left;
+            }
         }
 
-        /// <summary>
-        /// Chase the player by moving toward the player's current position.
-        /// </summary>
+        // NEW: Helper method for chasing the player.
         protected virtual void ChasePlayer(Vector2 playerPosition)
         {
-            Vector2 directionVector = playerPosition - Position;
-            if (directionVector != Vector2.Zero)
+            Vector2 diff = playerPosition - Position;
+            if (diff != Vector2.Zero)
             {
-                Vector2 moveDir = Vector2.Normalize(directionVector);
-                Position += moveDir * MovementSpeed * 0.02f;
-                // Update the current direction based on the dominant axis.
-                if (Math.Abs(moveDir.X) > Math.Abs(moveDir.Y))
-                    currentDirection = moveDir.X < 0 ? Direction.Left : Direction.Right;
-                else
-                    currentDirection = moveDir.Y < 0 ? Direction.Up : Direction.Down;
+                diff.Normalize();
+                Position += diff * MovementSpeed * 0.02f;
             }
         }
 
-        /// <summary>
-        /// Shoot a projectile.
-        /// </summary>
+        // NEW: Virtual shoot method (to be overridden by bosses as needed).
         protected virtual void Shoot()
         {
-            // For this example, choose the bullet texture based on the enemy’s current facing.
-            Vector2 bulletDirection;
-            switch (currentDirection)
-            {
-                case Direction.Up:
-                    bulletDirection = new Vector2(0, -1);
-                    break;
-                case Direction.Down:
-                    bulletDirection = new Vector2(0, 1);
-                    break;
-                case Direction.Left:
-                    bulletDirection = new Vector2(-1, 0);
-                    break;
-                case Direction.Right:
-                    bulletDirection = new Vector2(1, 0);
-                    break;
-                default:
-                    bulletDirection = new Vector2(1, 0);
-                    break;
-            }
-            // Place the bullet starting roughly at the center of the enemy.
-            Vector2 bulletPos = Position + new Vector2(sourceRectangle.Width / 2f, sourceRectangle.Height / 2f);
-            Bullet bullet = new Bullet(
-                (currentDirection == Direction.Left || currentDirection == Direction.Right) ? bulletHorizontalTexture : bulletVerticalTexture,
-                bulletPos,
-                bulletDirection,
-                bulletSpeed,
-                BulletDamage,
-                SpriteEffects.None,
-                BulletRange
-            );
-            bullets.Add(bullet);
+            // Minimal shoot implementation (can be empty if only bosses shoot).
         }
     }
 }
