@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Diagnostics;
 
 namespace Survivor_of_the_Bulge
@@ -8,7 +9,16 @@ namespace Survivor_of_the_Bulge
     {
         public enum GreenBossState { Idle, Patrol, Chase, Attack, Enraged, Dead }
         public GreenBossState CurrentState { get; private set; } = GreenBossState.Idle;
+
         private float stateTimer = 0f;
+        private bool isAggro = false;              // Becomes true when the boss takes damage.
+        private Vector2 attackTarget;              // Player position when boss was hit.
+        private Vector2 lastTargetPosition;        // Updated each frame with the current player's position.
+
+        // Behavior thresholds.
+        private readonly float shootingRange = 200f;  // Distance within which the boss attacks.
+        private readonly float chaseThreshold = 400f;   // Distance beyond which the boss patrols.
+        private readonly float aggroChaseMultiplier = 1.5f; // Increased chase speed when aggro.
 
         public GreenBoss(
             Texture2D back,
@@ -19,8 +29,7 @@ namespace Survivor_of_the_Bulge
             Vector2 startPosition,
             Direction startDirection,
             int health,
-            int bulletDamage
-        )
+            int bulletDamage)
             : base(back, front, left, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
             MovementSpeed = 140f;
@@ -35,86 +44,84 @@ namespace Survivor_of_the_Bulge
         {
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             stateTimer += delta;
-            float distanceToPlayer = Vector2.Distance(Position, playerPosition);
+            lastTargetPosition = playerPosition;
+            float distance = Vector2.Distance(Position, playerPosition);
 
-            switch (CurrentState)
+            // Aggro mode: if the boss has been damaged, it locks onto the attack target.
+            if (isAggro)
             {
-                case GreenBossState.Idle:
-                    if (stateTimer >= 2f)
+                if (Vector2.Distance(Position, attackTarget) > shootingRange)
+                {
+                    Vector2 diff = attackTarget - Position;
+                    if (diff != Vector2.Zero)
                     {
-                        CurrentState = GreenBossState.Patrol;
+                        diff.Normalize();
+                        Position += diff * MovementSpeed * aggroChaseMultiplier * delta;
+                        currentDirection = (Math.Abs(diff.X) > Math.Abs(diff.Y))
+                            ? (diff.X < 0 ? Direction.Left : Direction.Right)
+                            : (diff.Y < 0 ? Direction.Up : Direction.Down);
+                    }
+                    CurrentState = GreenBossState.Chase;
+                }
+                else
+                {
+                    CurrentState = GreenBossState.Attack;
+                    timeSinceLastShot += delta;
+                    if (timeSinceLastShot >= FiringInterval)
+                    {
+                        Shoot();
+                        timeSinceLastShot = 0f;
+                        // Reset aggro after attack.
+                        isAggro = false;
+                        CurrentState = GreenBossState.Idle;
                         stateTimer = 0f;
                     }
-                    break;
-
-                case GreenBossState.Patrol:
-                    Patrol(viewport);
-                    if (distanceToPlayer < 300)
+                }
+            }
+            else
+            {
+                // Normal behavior.
+                if (distance <= shootingRange)
+                {
+                    CurrentState = GreenBossState.Attack;
+                    // Update direction to face the player.
+                    Vector2 diff = playerPosition - Position;
+                    if (diff != Vector2.Zero)
                     {
-                        CurrentState = GreenBossState.Chase;
-                        stateTimer = 0f;
+                        diff.Normalize();
+                        currentDirection = (Math.Abs(diff.X) > Math.Abs(diff.Y))
+                            ? (diff.X < 0 ? Direction.Left : Direction.Right)
+                            : (diff.Y < 0 ? Direction.Up : Direction.Down);
                     }
-                    break;
-
-                case GreenBossState.Chase:
-                    ChasePlayer(playerPosition);
-                    if (distanceToPlayer < 150)
-                    {
-                        CurrentState = GreenBossState.Attack;
-                        stateTimer = 0f;
-                    }
-                    else if (distanceToPlayer > 400)
-                    {
-                        CurrentState = GreenBossState.Patrol;
-                        stateTimer = 0f;
-                    }
-                    break;
-
-                case GreenBossState.Attack:
                     timeSinceLastShot += delta;
                     if (timeSinceLastShot >= FiringInterval)
                     {
                         Shoot();
                         timeSinceLastShot = 0f;
                     }
-                    if (distanceToPlayer > 200)
-                    {
-                        CurrentState = GreenBossState.Chase;
-                        stateTimer = 0f;
-                    }
-                    if (Health < 0.3 * 300)
-                    {
-                        CurrentState = GreenBossState.Enraged;
-                        stateTimer = 0f;
-                    }
-                    break;
-
-                case GreenBossState.Enraged:
-                    MovementSpeed = 180f;
-                    FiringInterval = 0.8f;
+                }
+                else if (distance > shootingRange && distance <= chaseThreshold)
+                {
+                    CurrentState = GreenBossState.Chase;
                     ChasePlayer(playerPosition);
-                    if (distanceToPlayer < 150)
-                    {
-                        timeSinceLastShot += delta;
-                        if (timeSinceLastShot >= FiringInterval)
-                        {
-                            Shoot();
-                            timeSinceLastShot = 0f;
-                        }
-                    }
-                    if (distanceToPlayer > 300)
-                    {
-                        CurrentState = GreenBossState.Chase;
-                        stateTimer = 0f;
-                    }
-                    break;
-
-                case GreenBossState.Dead:
-                    isDead = true;
-                    return;
+                }
+                else
+                {
+                    CurrentState = GreenBossState.Patrol;
+                    Patrol(viewport);
+                }
             }
 
-            // Update bullets
+            // Animation update (assuming base Boss manages timer, frameTime, currentFrame, totalFrames, etc.)
+            timer += delta;
+            if (timer >= frameTime)
+            {
+                currentFrame = (currentFrame + 1) % totalFrames;
+                timer = 0f;
+            }
+            UpdateFrameDimensions();
+
+            // Update boss bullets.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -125,82 +132,33 @@ namespace Survivor_of_the_Bulge
                 }
             }
             bullets.RemoveAll(b => !b.IsActive);
-
-            timer += delta;
-            if (timer >= frameTime)
-            {
-                currentFrame = (currentFrame + 1) % totalFrames;
-                timer = 0f;
-            }
-            UpdateFrameDimensions();
         }
 
-        public override void Draw(SpriteBatch spriteBatch)
+        public override void TakeDamage(int amount)
         {
-            if (IsDead)
-                return;
+            base.TakeDamage(amount);
+            if (amount > 0)
+            {
+                // When hit, lock the current player position and enter aggro mode.
+                isAggro = true;
+                attackTarget = lastTargetPosition;
+            }
+        }
 
-            // Draw center-based
-            Texture2D currentTexture = frontTexture;
-            SpriteEffects spriteEffects = SpriteEffects.None;
+        protected override void Shoot()
+        {
+            // Determine direction based on currentDirection.
+            Vector2 direction = Vector2.Zero;
             switch (currentDirection)
             {
-                case Direction.Left:
-                    currentTexture = leftTexture;
-                    break;
-                case Direction.Right:
-                    currentTexture = leftTexture;
-                    spriteEffects = SpriteEffects.FlipHorizontally;
-                    break;
-                case Direction.Up:
-                    currentTexture = backTexture;
-                    break;
-                case Direction.Down:
-                    currentTexture = frontTexture;
-                    break;
+                case Direction.Up: direction = new Vector2(0, -1); break;
+                case Direction.Down: direction = new Vector2(0, 1); break;
+                case Direction.Left: direction = new Vector2(-1, 0); break;
+                case Direction.Right: direction = new Vector2(1, 0); break;
             }
-
-            int frameW = currentTexture.Width / totalFrames;
-            int frameH = currentTexture.Height;
-            Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
-
-            spriteBatch.Draw(
-                currentTexture,
-                Position,
-                sourceRectangle,
-                Color.White,
-                0f,
-                origin,
-                Scale,
-                spriteEffects,
-                0f
-            );
-
-            foreach (var bullet in bullets)
-                bullet.Draw(spriteBatch);
-        }
-
-        // If we want center-based collisions
-        public override Rectangle Bounds
-        {
-            get
-            {
-                int frameW = (currentDirection == Direction.Left || currentDirection == Direction.Right)
-                    ? leftTexture.Width / totalFrames
-                    : frontTexture.Width / totalFrames;
-                int frameH = (currentDirection == Direction.Left || currentDirection == Direction.Right)
-                    ? leftTexture.Height
-                    : frontTexture.Height;
-
-                float scaledW = frameW * Scale;
-                float scaledH = frameH * Scale;
-                return new Rectangle(
-                    (int)(Position.X - scaledW / 2),
-                    (int)(Position.Y - scaledH / 2),
-                    (int)scaledW,
-                    (int)scaledH
-                );
-            }
+            Vector2 bulletPos = Position + direction * 20f; // Offset from boss center.
+            Bullet bullet = new Bullet(bulletHorizontalTexture, bulletPos, direction, 500f, BulletDamage, SpriteEffects.None, BulletRange);
+            bullets.Add(bullet);
         }
     }
 }

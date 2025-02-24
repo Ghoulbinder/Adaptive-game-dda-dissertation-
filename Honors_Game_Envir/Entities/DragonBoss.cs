@@ -11,8 +11,10 @@ namespace Survivor_of_the_Bulge
         public DragonBossState CurrentState { get; private set; } = DragonBossState.Projectile;
 
         // Textures for projectile (ranged) and melee modes.
-        private Texture2D attackTexture;    // used for projectile attacks
-        private Texture2D walkingTexture;   // used for melee (chasing) mode
+        // In melee mode we now use the attack animation (instead of the walking animation) to show a melee attack.
+        private Texture2D attackTexture;
+        // For projectile mode, we also use the attackTexture.
+        // (If you prefer a separate texture for melee movement, you could add another field here.)
 
         // Dragon boss bullet textures.
         private Texture2D dragonBulletHorizontal;
@@ -35,6 +37,10 @@ namespace Survivor_of_the_Bulge
         private float meleeAttackInterval = 1.0f; // seconds between melee attacks
         private float timeSinceLastMelee = 0f;
         private int meleeDamage = 10;  // reduced melee damage
+        // Increase threshold: if player is closer than this distance, then switch to melee.
+        private float projectileThreshold = 250f;
+        // In melee mode, the boss will stop moving closer if within this range.
+        private float meleeRangeThreshold = 50f;
 
         // Last known player position.
         private Vector2 lastTargetPosition;
@@ -42,7 +48,7 @@ namespace Survivor_of_the_Bulge
         public DragonBoss(
             Texture2D idleTexture, // (passed to base; not used directly here)
             Texture2D attackTexture,
-            Texture2D walkingTexture,
+            Texture2D walkingTexture, // not used here because we only use attackTexture in both modes
             Texture2D bulletHorizontal,
             Texture2D bulletVertical,
             Vector2 startPosition,
@@ -51,8 +57,8 @@ namespace Survivor_of_the_Bulge
             int bulletDamage)
             : base(idleTexture, idleTexture, idleTexture, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
+            // Use the provided attack texture for both projectile and melee modes.
             this.attackTexture = attackTexture;
-            this.walkingTexture = walkingTexture;
             // Store dragon-specific bullet textures.
             dragonBulletHorizontal = bulletHorizontal;
             dragonBulletVertical = bulletVertical;
@@ -72,19 +78,18 @@ namespace Survivor_of_the_Bulge
             lastTargetPosition = playerPosition;
             float distance = Vector2.Distance(Position, playerPosition);
 
-            // FSM: Use projectile mode if player is far (>=200 pixels); otherwise, switch to melee mode.
-            if (distance >= 200)
+            // Switch to projectile mode if player is far away (>= projectileThreshold), otherwise use melee mode.
+            if (distance >= projectileThreshold)
             {
                 CurrentState = DragonBossState.Projectile;
-                // Reset melee timer when switching modes.
-                timeSinceLastMelee = meleeAttackInterval;
+                timeSinceLastMelee = meleeAttackInterval; // reset melee timer
             }
             else
             {
                 CurrentState = DragonBossState.Melee;
             }
 
-            // Choose animation speed based on mode.
+            // Update animation timer.
             float frameTime = (CurrentState == DragonBossState.Projectile) ? projectileFrameTime : meleeFrameTime;
             animTimer += delta;
             if (animTimer >= frameTime)
@@ -104,14 +109,18 @@ namespace Survivor_of_the_Bulge
             }
             else if (CurrentState == DragonBossState.Melee)
             {
-                // In melee mode, chase the player.
-                Vector2 diff = playerPosition - Position;
-                if (diff != Vector2.Zero)
+                // In melee mode, if the boss is farther than meleeRangeThreshold, chase the player.
+                if (distance > meleeRangeThreshold)
                 {
-                    diff.Normalize();
-                    Position += diff * MovementSpeed * 0.02f;
+                    Vector2 diff = playerPosition - Position;
+                    if (diff != Vector2.Zero)
+                    {
+                        diff.Normalize();
+                        Position += diff * MovementSpeed * 0.02f;
+                    }
                 }
                 timeSinceLastMelee += delta;
+                // When in melee range (boss's collision box intersects player's), perform a melee attack.
                 if (Bounds.Intersects(player.Bounds) && timeSinceLastMelee >= meleeAttackInterval)
                 {
                     player.TakeDamage(meleeDamage);
@@ -119,7 +128,7 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            // Update boss bullets.
+            // Update boss projectiles.
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -137,8 +146,8 @@ namespace Survivor_of_the_Bulge
             if (IsDead)
                 return;
 
-            // Choose texture based on mode.
-            Texture2D currentTexture = (CurrentState == DragonBossState.Projectile) ? attackTexture : walkingTexture;
+            // For both projectile and melee modes, use the attackTexture.
+            Texture2D currentTexture = attackTexture;
             int frameW = currentTexture.Width / framesPerRow;
             int frameH = currentTexture.Height / rows;
             Rectangle srcRect = new Rectangle((frameIndex % framesPerRow) * frameW,
@@ -161,9 +170,6 @@ namespace Survivor_of_the_Bulge
                 bullet.Draw(spriteBatch);
         }
 
-        /// <summary>
-        /// Fires a projectile using the dragon-specific bullet textures.
-        /// </summary>
         protected void ShootProjectile()
         {
             Vector2 diff = lastTargetPosition - Position;
@@ -181,7 +187,7 @@ namespace Survivor_of_the_Bulge
             if (diff.Y > 0)
                 effect |= SpriteEffects.FlipVertically;
 
-            Vector2 bulletPos = Position + diff * 20f; // Offset from the boss center.
+            Vector2 bulletPos = Position + diff * 20f; // Offset from boss center.
             Bullet bullet = new Bullet(chosenBulletTexture, bulletPos, diff, 500f, BulletDamage, effect, BulletRange);
             bullets.Add(bullet);
         }

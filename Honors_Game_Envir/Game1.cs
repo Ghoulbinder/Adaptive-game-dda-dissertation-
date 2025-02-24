@@ -6,15 +6,15 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Survivor_of_the_Bulge
 {
-    public enum GameState
-    {
-        MainMenu,
-        GreenForestCentre,
-        ForestTop,
-        ForestLeft,
-        ForestButtom,
-        ForestRight
-    }
+   // public enum GameState
+   // {
+   //     MainMenu,
+   //     GreenForestCentre,
+   //     ForestTop,
+   //     ForestLeft,
+   //     ForestButtom,
+   //     ForestRight
+   // }
 
     public class Game1 : Game
     {
@@ -43,6 +43,9 @@ namespace Survivor_of_the_Bulge
         private Random random = new Random();
 
         private bool isPaused = false;
+
+        // Boss spawn threshold (kill count) – change as needed.
+        private int bossKillThreshold = 2;
 
         public Game1()
         {
@@ -115,145 +118,8 @@ namespace Survivor_of_the_Bulge
 
             InitializeMaps();
 
-            // --- Boss Spawning ---
-
-            // GreenBoss on GreenForestCentre.
-            if (!maps[GameState.GreenForestCentre].BossSpawned)
-            {
-                Vector2 bossPos = new Vector2(
-                    (maps[GameState.GreenForestCentre].Background.Width - 256) / 2,
-                    (maps[GameState.GreenForestCentre].Background.Height - 256) / 2
-                );
-                GreenBoss greenBoss = new GreenBoss(
-                    Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                    Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                    Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                    bulletTexture1, bulletTexture2,
-                    bossPos,
-                    Boss.Direction.Up,
-                    300,
-                    15
-                );
-                maps[GameState.GreenForestCentre].AddEnemy(greenBoss);
-                maps[GameState.GreenForestCentre].SetBossSpawned();
-            }
-
-            // ButterflyBoss on ForestTop.
-            if (!maps[GameState.ForestTop].BossSpawned)
-            {
-                Vector2 bossPos = new Vector2(
-                    (maps[GameState.ForestTop].Background.Width - 256) / 2,
-                    (maps[GameState.ForestTop].Background.Height - 256) / 2
-                );
-                // For ButterflyBoss, we use its attack and walking textures (no idle).
-                Texture2D bossAttack = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
-                Texture2D bossWalking = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossWalking/ButterflyBossWalkingDown");
-                // Load butterfly boss bullet textures.
-                Texture2D butterflyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/butterfly_attack");
-                Texture2D butterflyBulletVertical = Content.Load<Texture2D>("Images/Projectile/butterfly_attack2");
-                ButterflyBoss butterflyBoss = new ButterflyBoss(
-                    bossAttack,
-                    bossWalking,
-                    butterflyBulletHorizontal, butterflyBulletVertical,
-                    bossPos,
-                    Boss.Direction.Up,
-                    300,
-                    15
-                );
-                maps[GameState.ForestTop].AddEnemy(butterflyBoss);
-                maps[GameState.ForestTop].SetBossSpawned();
-            }
-
-            // DragonBoss on ForestRight.
-            if (!maps[GameState.ForestRight].BossSpawned)
-            {
-                Vector2 bossPos = new Vector2(
-                    (maps[GameState.ForestRight].Background.Width - 256) / 2,
-                    (maps[GameState.ForestRight].Background.Height - 256) / 2
-                );
-                Texture2D dragonIdle = Content.Load<Texture2D>("Dragon_Boss/DragoBossIdle/DragoBossIdleDown");
-                Texture2D dragonAttack = Content.Load<Texture2D>("Dragon_Boss/DragoBossAttack/DragoBossAttackDown");
-                Texture2D dragonWalking = Content.Load<Texture2D>("Dragon_Boss/DragoBossWalking/DragoBossWalkingDown");
-                // Load dragon boss bullet textures.
-                Texture2D dragonBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball");
-                Texture2D dragonBulletVertical = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball2");
-                DragonBoss dragonBoss = new DragonBoss(
-                    dragonIdle,
-                    dragonAttack,
-                    dragonWalking,
-                    dragonBulletHorizontal,
-                    dragonBulletVertical,
-                    bossPos,
-                    Boss.Direction.Up,
-                    300,
-                    15
-                );
-                maps[GameState.ForestRight].AddEnemy(dragonBoss);
-                maps[GameState.ForestRight].SetBossSpawned();
-            }
-
-            // OgreBoss on ForestButtom.
-            if (!maps[GameState.ForestButtom].BossSpawned)
-            {
-                Vector2 bossPos = new Vector2(
-                    (maps[GameState.ForestButtom].Background.Width - 256) / 2,
-                    (maps[GameState.ForestButtom].Background.Height - 256) / 2
-                );
-                Texture2D ogreIdleUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleUp");
-                Texture2D ogreIdleDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleDown");
-                Texture2D ogreIdleLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleLeft");
-                Texture2D ogreIdleRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleRight");
-
-                Texture2D ogreAttackUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackUp");
-                Texture2D ogreAttackDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackDown");
-                Texture2D ogreAttackLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackLeft");
-                Texture2D ogreAttackRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackRight");
-
-                Texture2D ogreWalkingUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingUp");
-                Texture2D ogreWalkingDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingDown");
-                Texture2D ogreWalkingLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingLeft");
-                Texture2D ogreWalkingRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingRight");
-
-                OgreBoss ogreBoss = new OgreBoss(
-                    ogreIdleUp, ogreIdleDown, ogreIdleLeft, ogreIdleRight,
-                    ogreAttackUp, ogreAttackDown, ogreAttackLeft, ogreAttackRight,
-                    ogreWalkingUp, ogreWalkingDown, ogreWalkingLeft, ogreWalkingRight,
-                    bulletTexture1, bulletTexture2,
-                    bossPos,
-                    Boss.Direction.Up,
-                    300,
-                    15
-                );
-                maps[GameState.ForestButtom].AddEnemy(ogreBoss);
-                maps[GameState.ForestButtom].SetBossSpawned();
-            }
-
-
-            // SpiderBoss on ForestLeft.
-            if (!maps[GameState.ForestLeft].BossSpawned)
-            {
-                Vector2 bossPos = new Vector2(
-                    (maps[GameState.ForestLeft].Background.Width - 256) / 2,
-                    (maps[GameState.ForestLeft].Background.Height - 256) / 2
-                );
-                Texture2D spiderIdle = Content.Load<Texture2D>("Spider_Boss/SpiderBossIdle/SpiderBossIdleDown");
-                Texture2D spiderAttack = Content.Load<Texture2D>("Spider_Boss/SpiderBossAttack/SpiderBossAttackDown");
-                Texture2D spiderWalking = Content.Load<Texture2D>("Spider_Boss/SpiderBossWalking/SpiderBossWalkingDown");
-                Texture2D spiderBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/spider_attack");
-                Texture2D spiderBulletVertical = Content.Load<Texture2D>("Images/Projectile/spider_attack2");
-                SpiderBoss spiderBoss = new SpiderBoss(
-                    spiderIdle,
-                    spiderAttack,
-                    spiderWalking,
-                    spiderBulletHorizontal, spiderBulletVertical,
-                    bossPos,
-                    Boss.Direction.Up,
-                    300,
-                    15
-                );
-                maps[GameState.ForestLeft].AddEnemy(spiderBoss);
-                maps[GameState.ForestLeft].SetBossSpawned();
-            }
+            // Bosses are no longer spawned immediately in LoadContent.
+            // They will be spawned in the Update method when the kill count on a map reaches the threshold.
 
             // Adjust viewport based on the GreenForestCentre background.
             var largestMap = maps[GameState.GreenForestCentre];
@@ -373,6 +239,7 @@ namespace Survivor_of_the_Bulge
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
                 playerStats.UpdateHealth(player.Health);
 
+                // Remove dead enemies and update kill count.
                 for (int i = currentMap.Enemies.Count - 1; i >= 0; i--)
                 {
                     if (currentMap.Enemies[i].IsDead)
@@ -382,6 +249,136 @@ namespace Survivor_of_the_Bulge
                     }
                 }
 
+                // Spawn boss if kill count reaches threshold and boss hasn't been spawned.
+                if (currentMap.KillCount >= bossKillThreshold && !currentMap.BossSpawned)
+                {
+                    Vector2 bossPos = new Vector2(
+                        (currentMap.Background.Width - 256) / 2,
+                        (currentMap.Background.Height - 256) / 2
+                    );
+
+                    switch (currentState)
+                    {
+                        case GameState.GreenForestCentre:
+                            {
+                                // Spawn GreenBoss.
+                                GreenBoss greenBoss = new GreenBoss(
+                                    Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                                    Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                                    Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                                    Content.Load<Texture2D>("Images/Projectile/bullet"),
+                                    Content.Load<Texture2D>("Images/Projectile/bullet2"),
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    300,
+                                    15
+                                );
+                                currentMap.AddEnemy(greenBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                        case GameState.ForestTop:
+                            {
+                                // Spawn ButterflyBoss.
+                                Texture2D bossAttack = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
+                                Texture2D bossWalking = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossWalking/ButterflyBossWalkingDown");
+                                Texture2D butterflyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/butterfly_attack");
+                                Texture2D butterflyBulletVertical = Content.Load<Texture2D>("Images/Projectile/butterfly_attack2");
+                                ButterflyBoss butterflyBoss = new ButterflyBoss(
+                                    bossAttack,
+                                    bossWalking,
+                                    butterflyBulletHorizontal, butterflyBulletVertical,
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    300,
+                                    15
+                                );
+                                currentMap.AddEnemy(butterflyBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                        case GameState.ForestRight:
+                            {
+                                // Spawn DragonBoss.
+                                Texture2D dragonIdle = Content.Load<Texture2D>("Dragon_Boss/DragoBossIdle/DragoBossIdleDown");
+                                Texture2D dragonAttack = Content.Load<Texture2D>("Dragon_Boss/DragoBossAttack/DragoBossAttackDown");
+                                Texture2D dragonWalking = Content.Load<Texture2D>("Dragon_Boss/DragoBossWalking/DragoBossWalkingDown");
+                                Texture2D dragonBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball");
+                                Texture2D dragonBulletVertical = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball2");
+                                DragonBoss dragonBoss = new DragonBoss(
+                                    dragonIdle,
+                                    dragonAttack,
+                                    dragonWalking,
+                                    dragonBulletHorizontal,
+                                    dragonBulletVertical,
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    300,
+                                    15
+                                );
+                                currentMap.AddEnemy(dragonBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                        case GameState.ForestButtom:
+                            {
+                                // Spawn OgreBoss.
+                                Texture2D ogreIdleUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleUp");
+                                Texture2D ogreIdleDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleDown");
+                                Texture2D ogreIdleLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleLeft");
+                                Texture2D ogreIdleRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleRight");
+
+                                Texture2D ogreAttackUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackUp");
+                                Texture2D ogreAttackDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackDown");
+                                Texture2D ogreAttackLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackLeft");
+                                Texture2D ogreAttackRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackRight");
+
+                                Texture2D ogreWalkingUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingUp");
+                                Texture2D ogreWalkingDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingDown");
+                                Texture2D ogreWalkingLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingLeft");
+                                Texture2D ogreWalkingRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingRight");
+
+                                OgreBoss ogreBoss = new OgreBoss(
+                                    ogreIdleUp, ogreIdleDown, ogreIdleLeft, ogreIdleRight,
+                                    ogreAttackUp, ogreAttackDown, ogreAttackLeft, ogreAttackRight,
+                                    ogreWalkingUp, ogreWalkingDown, ogreWalkingLeft, ogreWalkingRight,
+                                    Content.Load<Texture2D>("Images/Projectile/bullet"),
+                                    Content.Load<Texture2D>("Images/Projectile/bullet2"),
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    300,
+                                    15
+                                );
+                                currentMap.AddEnemy(ogreBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                        case GameState.ForestLeft:
+                            {
+                                // Spawn SpiderBoss.
+                                Texture2D spiderIdle = Content.Load<Texture2D>("Spider_Boss/SpiderBossIdle/SpiderBossIdleDown");
+                                Texture2D spiderAttack = Content.Load<Texture2D>("Spider_Boss/SpiderBossAttack/SpiderBossAttackDown");
+                                Texture2D spiderWalking = Content.Load<Texture2D>("Spider_Boss/SpiderBossWalking/SpiderBossWalkingDown");
+                                Texture2D spiderBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/spider_attack");
+                                Texture2D spiderBulletVertical = Content.Load<Texture2D>("Images/Projectile/spider_attack2");
+                                SpiderBoss spiderBoss = new SpiderBoss(
+                                    spiderIdle,
+                                    spiderAttack,
+                                    spiderWalking,
+                                    spiderBulletHorizontal, spiderBulletVertical,
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    300,
+                                    15
+                                );
+                                currentMap.AddEnemy(spiderBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                    }
+                }
+
+                // Update enemies.
                 foreach (var enemy in currentMap.Enemies)
                 {
                     enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport, player.Position, player);
@@ -394,6 +391,7 @@ namespace Survivor_of_the_Bulge
                 foreach (var snow in snowFlakes)
                     snow.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
 
+                // Process map transitions.
                 foreach (var transition in transitions)
                 {
                     if (transition.From == currentState && transition.Zone.Intersects(player.Bounds))
