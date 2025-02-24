@@ -6,15 +6,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Survivor_of_the_Bulge
 {
-   // public enum GameState
-   // {
-   //     MainMenu,
-   //     GreenForestCentre,
-   //     ForestTop,
-   //     ForestLeft,
-   //     ForestButtom,
-   //     ForestRight
-   // }
+  
 
     public class Game1 : Game
     {
