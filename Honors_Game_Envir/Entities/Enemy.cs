@@ -27,42 +27,36 @@ namespace Survivor_of_the_Bulge
         public float MovementSpeed { get; set; } = 100f;
         public int Health { get; protected set; }
         public int BulletDamage { get; set; } = 5;
-        public float FiringInterval { get; set; } = 2f; // seconds between shots
-        public float BulletRange { get; set; } = 1000f; // extended range so bullets only disappear off screen
+        public float FiringInterval { get; set; } = 2f;
+        public float BulletRange { get; set; } = 1000f;
         public int CollisionDamage { get; set; } = 15;
         public float CollisionDamageInterval { get; set; } = 1f;
 
-        // FSM timers.
         protected float timeSinceLastShot = 0f;
         protected float collisionDamageTimer = 0f;
 
         // Animation fields.
         protected Rectangle sourceRectangle;
-        protected float frameTime = 0.1f; // seconds per frame (can be adjusted per state if desired)
+        protected float frameTime = 0.1f;
         protected float timer = 0f;
         protected int currentFrame = 0;
-        protected int totalFrames = 4; // e.g. 4 frames per animation
-        // List of bullets fired by this enemy.
+        protected int totalFrames = 4;
         protected List<Bullet> bullets;
         protected float bulletSpeed = 300f;
 
-        // Finite State Machine for the enemy.
         public enum EnemyState { Idle, Patrol, Chase, Attack, Dead }
         public enum Direction { Left, Right, Up, Down }
         protected EnemyState currentState;
         protected Direction currentDirection;
 
         protected const int CollisionPadding = 5;
+        protected float shootingRange = 200f;
+        protected float chaseRange = 400f;
 
-        // Define thresholds.
-        protected float shootingRange = 200f; // if player is within 200 pixels, attack
-        protected float chaseRange = 400f;    // if player is between 200 and 400, chase
+        // Experience modifications.
+        public int ExperienceReward { get; set; } = 10;
+        private bool experienceAwarded = false;
 
-        // **** Experience gain modifications ****
-        public int ExperienceReward { get; set; } = 10; // Default exp reward for regular enemy
-        private bool experienceAwarded = false;         // Ensure exp is awarded only once
-
-        // Award experience to the player when the enemy dies.
         protected void AwardExperience(Player player)
         {
             if (!experienceAwarded)
@@ -71,21 +65,21 @@ namespace Survivor_of_the_Bulge
                 experienceAwarded = true;
             }
         }
-        // **** End modifications ****
 
-        // Basic bounding box.
+        // Use a center-based bounding box.
         public virtual Rectangle Bounds
         {
             get
             {
-                return new Rectangle((int)Position.X, (int)Position.Y, sourceRectangle.Width, sourceRectangle.Height);
+                int frameW = sourceRectangle.Width;
+                int frameH = sourceRectangle.Height;
+                return new Rectangle((int)(Position.X - frameW / 2f), (int)(Position.Y - frameH / 2f), frameW, frameH);
             }
         }
 
         public bool IsDead => isDead;
         protected bool isDead = false;
 
-        // Constructor.
         public Enemy(Texture2D back, Texture2D front, Texture2D left,
                      Texture2D bulletHorizontal, Texture2D bulletVertical,
                      Vector2 startPosition, Direction startDirection,
@@ -116,12 +110,8 @@ namespace Survivor_of_the_Bulge
             currentState = EnemyState.Patrol;
         }
 
-        /// <summary>
-        /// Update the enemy’s behavior.
-        /// </summary>
         public virtual void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
-            // If already dead, nothing to update.
             if (isDead)
                 return;
 
@@ -129,17 +119,11 @@ namespace Survivor_of_the_Bulge
             float distance = Vector2.Distance(Position, playerPosition);
 
             if (distance <= shootingRange)
-            {
                 currentState = EnemyState.Attack;
-            }
             else if (distance <= chaseRange)
-            {
                 currentState = EnemyState.Chase;
-            }
             else
-            {
                 currentState = EnemyState.Patrol;
-            }
 
             switch (currentState)
             {
@@ -179,9 +163,6 @@ namespace Survivor_of_the_Bulge
             bullets.RemoveAll(b => !b.IsActive);
         }
 
-        /// <summary>
-        /// Update the source rectangle based on the current frame.
-        /// </summary>
         protected virtual void UpdateFrameDimensions()
         {
             int textureWidth = 0, textureHeight = 0;
@@ -206,9 +187,6 @@ namespace Survivor_of_the_Bulge
             sourceRectangle = new Rectangle(currentFrame * frameW, 0, frameW, frameH);
         }
 
-        /// <summary>
-        /// Inflict damage on the enemy and award experience if killed.
-        /// </summary>
         public virtual void TakeDamage(int amount, Player player)
         {
             if (isDead)
@@ -224,9 +202,7 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        /// <summary>
-        /// Draw the enemy.
-        /// </summary>
+        // IMPORTANT: This Draw method is now virtual.
         public virtual void Draw(SpriteBatch spriteBatch)
         {
             if (isDead)
@@ -257,7 +233,6 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        // Helper methods for enemy behavior.
         protected virtual void Patrol(Viewport viewport)
         {
             // Implement patrol behavior if desired.
@@ -298,7 +273,7 @@ namespace Survivor_of_the_Bulge
                     bulletDirection = new Vector2(1, 0);
                     break;
             }
-            Vector2 bulletPos = Position + new Vector2(sourceRectangle.Width / 2f, sourceRectangle.Height / 2f);
+            Vector2 bulletPos = Position; // Spawn at center.
             Bullet bullet = new Bullet(
                 (currentDirection == Direction.Left || currentDirection == Direction.Right) ? bulletHorizontalTexture : bulletVerticalTexture,
                 bulletPos,

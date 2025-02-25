@@ -19,12 +19,11 @@ namespace Survivor_of_the_Bulge
             CollisionDamage = 30;
         }
 
-        // Overriding the parent's Bounds with center-based logic
+        // Override Bounds with center-based logic using scaling.
         public override Rectangle Bounds
         {
             get
             {
-                // For typical 4-frame textures
                 int frameW, frameH;
                 if (currentDirection == Direction.Left || currentDirection == Direction.Right)
                 {
@@ -40,8 +39,6 @@ namespace Survivor_of_the_Bulge
                 float scaledW = frameW * Scale;
                 float scaledH = frameH * Scale;
 
-                // Position is top-left in base Enemy, but let's do center-based
-                // So we interpret 'Position' as the center
                 return new Rectangle(
                     (int)(Position.X - scaledW / 2),
                     (int)(Position.Y - scaledH / 2),
@@ -51,6 +48,7 @@ namespace Survivor_of_the_Bulge
             }
         }
 
+        // Override Draw method.
         public override void Draw(SpriteBatch spriteBatch)
         {
             if (IsDead) return;
@@ -74,7 +72,6 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
-            // sourceRectangle is inherited from Enemy
             int frameW = currentTexture.Width / totalFrames;
             int frameH = currentTexture.Height;
             Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
