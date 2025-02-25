@@ -96,9 +96,6 @@ namespace Survivor_of_the_Bulge
             string displayText = $"{promptText}\n{currentInput}\n\nFinal Score: {finalScore}\nTime Spent: {timeSpent:F2} sec\n\nPrevious Scores:\n";
             foreach (ScoreboardEntry entry in gameData.Scoreboard)
             {
-                displayText += $"{entry.PlayerName}: {entry.FinalScore} (Level {entry.PlayerName}, Lives Lost: {entry.LivesLost}, Time: {entry.TimeSpentSeconds:F0} sec)\n";
-                // (Adjust formatting as desired—here we use entry.PlayerName twice accidentally; fix next)
-                // Corrected:
                 displayText += $"{entry.PlayerName}: {entry.FinalScore} (Level {entry.LevelReached}, Lives Lost: {entry.LivesLost}, Time: {entry.TimeSpentSeconds:F0} sec)\n";
             }
             spriteBatch.DrawString(font, displayText, new Vector2(50, 50), Color.White);
@@ -110,14 +107,13 @@ namespace Survivor_of_the_Bulge
             ScoreboardEntry entry = new ScoreboardEntry
             {
                 PlayerName = currentInput,
+                LevelReached = currentLevel,
                 BulletsFired = bulletsFired,
                 BulletsUsedAgainstEnemies = bulletsUsedEnemies,
                 BulletsUsedAgainstBosses = bulletsUsedBosses,
                 LivesLost = livesLost,
                 TimeSpentSeconds = timeSpent,
-                FinalScore = finalScore,
-                // Assuming SessionData doesn't include these details in ScoreboardEntry,
-                // you may add more properties if needed.
+                FinalScore = finalScore
             };
 
             gameData.CumulativeStats.TotalBulletsFired += bulletsFired;

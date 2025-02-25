@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using DDA_Tool;
 
 namespace Survivor_of_the_Bulge
 {
@@ -36,12 +37,8 @@ namespace Survivor_of_the_Bulge
 
         private bool isPaused = false;
 
-        // Boss spawn threshold.
-        private int bossKillThreshold = 2;
-
         // *** Autosave/Scoreboard Fields ***
         private GameData gameData; // persistent data loaded from XML
-        // Session tracking counters:
         public int currentLevel = 1;
         public int currentLives = 3;
         public int currentScore = 0;
@@ -52,6 +49,13 @@ namespace Survivor_of_the_Bulge
         public int deathsThisSession = 0;
         private DateTime sessionStartTime;
         // *** End Autosave/Scoreboard Fields ***
+
+        // New fields for dynamic difficulty.
+        private DynamicDifficultyController difficultyController;
+        private DifficultyLevel previousDifficulty;
+
+        // New field for displaying a temporary difficulty notification.
+        private DifficultyNotification difficultyNotification;
 
         // New field for scoreboard state.
         private ScoreboardScreen scoreboardScreen;
@@ -89,6 +93,10 @@ namespace Survivor_of_the_Bulge
             livesLostThisSession = 0;
             deathsThisSession = 0;
             sessionStartTime = DateTime.Now;
+
+            // Initialize our dynamic difficulty controller.
+            difficultyController = new DynamicDifficultyController();
+            previousDifficulty = difficultyController.CurrentDifficulty;
 
             base.Initialize();
         }
@@ -217,8 +225,8 @@ namespace Survivor_of_the_Bulge
 
                 int baseHealth = 50;
                 int baseDamage = 5;
-                int finalHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
-                int finalDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
+                int finalHealth = (int)(baseHealth * difficultyController.EnemyHealthMultiplier);
+                int finalDamage = (int)(baseDamage * difficultyController.EnemyDamageMultiplier);
 
                 Enemy e = new Enemy(
                     enemyBack,
@@ -239,13 +247,33 @@ namespace Survivor_of_the_Bulge
         {
             var currentKeyboardState = Keyboard.GetState();
 
+            // Handle difficulty key input.
+            if (currentKeyboardState.IsKeyDown(Keys.D1))
+            {
+                difficultyController.HandleKeyInput('1');
+            }
+            else if (currentKeyboardState.IsKeyDown(Keys.D2))
+            {
+                difficultyController.HandleKeyInput('2');
+            }
+            else if (currentKeyboardState.IsKeyDown(Keys.D3))
+            {
+                difficultyController.HandleKeyInput('3');
+            }
+            // If difficulty changed, show notification.
+            if (difficultyController.CurrentDifficulty != previousDifficulty)
+            {
+                difficultyNotification = new DifficultyNotification("Game difficulty changed to " + difficultyController.CurrentDifficulty.ToString(), 5.0f, gameFont);
+                previousDifficulty = difficultyController.CurrentDifficulty;
+            }
+
             if (currentKeyboardState.IsKeyDown(Keys.Tab) && previousKeyboardState.IsKeyUp(Keys.Tab))
             {
                 isPaused = !isPaused;
                 IsMouseVisible = isPaused;
             }
 
-            // Instead of exiting immediately, if Escape is pressed we signal game over.
+            // Instead of exiting immediately, if Escape is pressed, signal game over.
             if (currentKeyboardState.IsKeyDown(Keys.Escape))
             {
                 GameOver();
@@ -262,11 +290,9 @@ namespace Survivor_of_the_Bulge
             }
             else if (currentState != GameState.MainMenu)
             {
-                // If game over is signaled, switch to scoreboard state.
                 if (currentState == GameState.Scoreboard)
                 {
                     scoreboardScreen.Update(gameTime);
-                    // Optionally, if finished then exit.
                     if (scoreboardScreen.Finished)
                         Environment.Exit(0);
                 }
@@ -287,8 +313,8 @@ namespace Survivor_of_the_Bulge
                         }
                     }
 
-                    // Spawn boss if kill count reaches threshold and boss hasn't been spawned.
-                    if (currentMap.KillCount >= bossKillThreshold && !currentMap.BossSpawned)
+                    // Spawn boss if kill count reaches the value from the difficulty controller and boss hasn't been spawned.
+                    if (currentMap.KillCount >= difficultyController.BossSpawnThreshold && !currentMap.BossSpawned)
                     {
                         Vector2 bossPos = new Vector2(
                             (currentMap.Background.Width - 256) / 2,
@@ -299,7 +325,6 @@ namespace Survivor_of_the_Bulge
                         {
                             case GameState.GreenForestCentre:
                                 {
-                                    // Spawn GreenBoss.
                                     GreenBoss greenBoss = new GreenBoss(
                                         Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
                                         Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
@@ -317,7 +342,6 @@ namespace Survivor_of_the_Bulge
                                 }
                             case GameState.ForestTop:
                                 {
-                                    // Spawn ButterflyBoss.
                                     Texture2D bossAttack = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
                                     Texture2D bossWalking = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossWalking/ButterflyBossWalkingDown");
                                     Texture2D butterflyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/butterfly_attack");
@@ -337,7 +361,6 @@ namespace Survivor_of_the_Bulge
                                 }
                             case GameState.ForestRight:
                                 {
-                                    // Spawn DragonBoss.
                                     Texture2D dragonIdle = Content.Load<Texture2D>("Dragon_Boss/DragoBossIdle/DragoBossIdleDown");
                                     Texture2D dragonAttack = Content.Load<Texture2D>("Dragon_Boss/DragoBossAttack/DragoBossAttackDown");
                                     Texture2D dragonWalking = Content.Load<Texture2D>("Dragon_Boss/DragoBossWalking/DragoBossWalkingDown");
@@ -360,7 +383,6 @@ namespace Survivor_of_the_Bulge
                                 }
                             case GameState.ForestButtom:
                                 {
-                                    // Spawn OgreBoss.
                                     Texture2D ogreIdleUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleUp");
                                     Texture2D ogreIdleDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleDown");
                                     Texture2D ogreIdleLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleLeft");
@@ -393,7 +415,6 @@ namespace Survivor_of_the_Bulge
                                 }
                             case GameState.ForestLeft:
                                 {
-                                    // Spawn SpiderBoss.
                                     Texture2D spiderIdle = Content.Load<Texture2D>("Spider_Boss/SpiderBossIdle/SpiderBossIdleDown");
                                     Texture2D spiderAttack = Content.Load<Texture2D>("Spider_Boss/SpiderBossAttack/SpiderBossAttackDown");
                                     Texture2D spiderWalking = Content.Load<Texture2D>("Spider_Boss/SpiderBossWalking/SpiderBossWalkingDown");
@@ -498,6 +519,16 @@ namespace Survivor_of_the_Bulge
                 if (isPaused)
                 {
                     pauseMenu.Draw(_spriteBatch, playerStats);
+                }
+
+                // Draw difficulty notification if active.
+                if (difficultyNotification != null)
+                {
+                    difficultyNotification.Update(gameTime);
+                    if (difficultyNotification.IsActive)
+                        difficultyNotification.Draw(_spriteBatch);
+                    else
+                        difficultyNotification = null;
                 }
 
                 _spriteBatch.End();
