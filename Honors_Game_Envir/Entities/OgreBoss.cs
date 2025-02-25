@@ -31,6 +31,7 @@ namespace Survivor_of_the_Bulge
 
         private float animTimer = 0f;
         private int frameIndex = 0;
+        private float timeSinceLastShot = 0f;
 
         // Behavior variables.
         private bool isAggro = false;
@@ -96,6 +97,11 @@ namespace Survivor_of_the_Bulge
                     fixedAngle = (float)Math.Atan2(playerPosition.Y - Position.Y, playerPosition.X - Position.X);
             }
 
+            // Normalize fixedAngle to 0-360.
+            float angleDeg = MathHelper.ToDegrees(fixedAngle);
+            if (angleDeg < 0)
+                angleDeg += 360;
+
             float distance = Vector2.Distance(Position, playerPosition);
 
             if (!isAggro)
@@ -132,9 +138,10 @@ namespace Survivor_of_the_Bulge
                     timeSinceLastShot += delta;
                     if (timeSinceLastShot >= FiringInterval)
                     {
-                        if (Bounds.Intersects(player.Bounds))
+                        // Check if player is within melee range.
+                        if (Vector2.Distance(Position, player.Position) <= meleeThreshold)
                         {
-                            player.TakeDamage(meleeDamage);
+                            player.TakeDamage(meleeDamage * 2);
                         }
                         CurrentState = OgreBossState.Reset;
                         resetTimer = 0f;
@@ -153,12 +160,7 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            float frameTime;
-            int totalFrames;
-            int framesPerRowLocal;
-            Texture2D currentTexture;
-
-            float angleDeg = MathHelper.ToDegrees(fixedAngle);
+            // Use the normalized angleDeg for texture selection.
             Texture2D chosenIdle, chosenAttack, chosenWalking;
             if (angleDeg >= 45 && angleDeg < 135)
             {
@@ -185,32 +187,36 @@ namespace Survivor_of_the_Bulge
                 chosenWalking = walkingRightTexture;
             }
 
+            Texture2D currentTexture;
+            int framesPerRowLocal, totalFramesLocal;
+            float frameTime;
+
             if (CurrentState == OgreBossState.Idle)
             {
                 currentTexture = chosenIdle;
                 framesPerRowLocal = commonFramesPerRow;
-                totalFrames = TotalFrames_Common;
+                totalFramesLocal = TotalFrames_Common;
                 frameTime = idleFrameTime;
             }
             else if (CurrentState == OgreBossState.Aggro)
             {
                 currentTexture = chosenWalking;
                 framesPerRowLocal = walkingFramesPerRow;
-                totalFrames = TotalFrames_Walking;
+                totalFramesLocal = TotalFrames_Walking;
                 frameTime = walkingFrameTime;
             }
             else
             {
                 currentTexture = chosenAttack;
                 framesPerRowLocal = commonFramesPerRow;
-                totalFrames = TotalFrames_Common;
+                totalFramesLocal = TotalFrames_Common;
                 frameTime = attackFrameTime;
             }
 
             animTimer += delta;
             if (animTimer >= frameTime)
             {
-                frameIndex = (frameIndex + 1) % totalFrames;
+                frameIndex = (frameIndex + 1) % totalFramesLocal;
                 animTimer = 0f;
             }
 
@@ -231,7 +237,11 @@ namespace Survivor_of_the_Bulge
             if (IsDead)
                 return;
 
+            // Normalize fixedAngle for drawing.
             float angleDeg = MathHelper.ToDegrees(fixedAngle);
+            if (angleDeg < 0)
+                angleDeg += 360;
+
             Texture2D chosenIdle, chosenAttack, chosenWalking;
             if (angleDeg >= 45 && angleDeg < 135)
             {

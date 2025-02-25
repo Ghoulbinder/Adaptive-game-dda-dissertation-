@@ -143,18 +143,32 @@ namespace Survivor_of_the_Bulge
             }
         }
 
+        // Modified Shoot method: choose bullet texture based on current direction.
         protected override void Shoot()
         {
             Vector2 direction = Vector2.Zero;
+            Texture2D bulletTexture = null;
             switch (currentDirection)
             {
-                case Direction.Up: direction = new Vector2(0, -1); break;
-                case Direction.Down: direction = new Vector2(0, 1); break;
-                case Direction.Left: direction = new Vector2(-1, 0); break;
-                case Direction.Right: direction = new Vector2(1, 0); break;
+                case Direction.Up:
+                    direction = new Vector2(0, -1);
+                    bulletTexture = bulletVerticalTexture;
+                    break;
+                case Direction.Down:
+                    direction = new Vector2(0, 1);
+                    bulletTexture = bulletVerticalTexture;
+                    break;
+                case Direction.Left:
+                    direction = new Vector2(-1, 0);
+                    bulletTexture = bulletHorizontalTexture;
+                    break;
+                case Direction.Right:
+                    direction = new Vector2(1, 0);
+                    bulletTexture = bulletHorizontalTexture;
+                    break;
             }
             Vector2 bulletPos = Position + direction * 20f;
-            Bullet bullet = new Bullet(bulletHorizontalTexture, bulletPos, direction, 500f, BulletDamage, SpriteEffects.None, BulletRange);
+            Bullet bullet = new Bullet(bulletTexture, bulletPos, direction, 500f, BulletDamage, SpriteEffects.None, BulletRange);
             bullets.Add(bullet);
         }
     }

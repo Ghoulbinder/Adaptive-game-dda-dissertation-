@@ -29,6 +29,9 @@ namespace Survivor_of_the_Bulge
         private int bulletDamage = 10;
         private PlayerStats stats;
 
+        // We'll store the initial health as max health.
+        private int _maxHealth;
+
         // Animation fields (all sheets are 1536x1024: 6 columns x 4 rows)
         private float frameTime = 0.1f;
         private float timer = 0f;
@@ -99,6 +102,9 @@ namespace Survivor_of_the_Bulge
             this.stats = stats;
             bullets = new List<Bullet>();
 
+            // Set the maximum health based on the initial health from stats.
+            _maxHealth = stats.Health;
+
             // Start with Walk state (used as idle) facing Down.
             currentDirection = Direction.Down;
             currentState = PlayerState.Walk;
@@ -114,8 +120,19 @@ namespace Survivor_of_the_Bulge
             Debug.WriteLine($"Player took {amount} damage. Health now: {stats.Health}");
             if (stats.Health <= 0)
             {
-                Debug.WriteLine("Player has died!");
-                // Add game-over or respawn logic here.
+                // Player has "died" in this life.
+                if (stats.Lives > 1)
+                {
+                    // Lose one life and reset health.
+                    stats.Lives--;
+                    stats.Health = _maxHealth;
+                    Debug.WriteLine($"Player lost a life. Lives remaining: {stats.Lives}. Health reset to {_maxHealth}.");
+                }
+                else
+                {
+                    Debug.WriteLine("Player has died with no lives remaining. Exiting game.");
+                    Environment.Exit(0);
+                }
             }
         }
 
