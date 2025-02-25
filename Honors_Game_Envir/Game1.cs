@@ -499,7 +499,37 @@ namespace Survivor_of_the_Bulge
                 {
                     _spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
                     mainMenu.Draw(_spriteBatch);
+
+                    string introStory =
+                        @"In the twilight of war, you were a hardened soldier in the Battle of the Bulge.
+                        Your mission was daring, to infiltrate a secret Nazi stronghold and plant enchanted bombs 
+                        deep within its iron heart. Along the way, you witnessed visions of eerie, otherworldly marvels, 
+                        creatures and phenomena that defied mortal understanding.
+                        
+                        When the alarms blared and your escape was cut off, you ignited the bombs in a desperate act of defiance.
+                        In the ensuing cataclysm, reality itself shattered.
+                        You awoke to find that you had been transformed, no longer a mere soldier, but a fierce huntress 
+                        wielding a mystical bow with uncanny precision.
+                        
+                        Now, in a forest pulsing with ancient magic, spectral German soldiers march as if haunted by the past,
+                        and dark, powerful entities lurk in the shadows. Trapped in a relentless time loop, your destiny 
+                        is entwined with supernatural forces that challenge every fiber of your being.
+                        
+                        Can you unravel the mystery of your transformation and restore the balance between worlds?
+                        
+                        Press Enter to step into the legend...";
+
+                    Vector2 textSize = gameFont.MeasureString(introStory);
+                    float margin = 50f;
+                    // X position: right-aligned with a margin.
+                    float posX = GraphicsDevice.Viewport.Width - textSize.X - margin;
+                    // Y position: centered vertically.
+                    float posY = (GraphicsDevice.Viewport.Height - textSize.Y) / 2;
+                    Vector2 position = new Vector2(posX, posY);
+
+                    _spriteBatch.DrawString(gameFont, introStory, position, Color.Yellow);
                 }
+
                 else
                 {
                     var currentMap = maps[currentState];
