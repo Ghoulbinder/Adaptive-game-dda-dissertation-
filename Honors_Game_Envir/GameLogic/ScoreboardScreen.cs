@@ -25,6 +25,8 @@ namespace Survivor_of_the_Bulge
         private bool finished;
         public bool Finished => finished;
 
+        private KeyboardState previousKBState;
+
         public ScoreboardScreen(SpriteFont font, double timeSpent, int bulletsFired, int bulletsUsedEnemies, int bulletsUsedBosses, int livesLost, int currentScore, int currentLevel, int currentLives, int deaths, GameData gameData)
         {
             this.font = font;
@@ -48,45 +50,49 @@ namespace Survivor_of_the_Bulge
             promptText = "Please enter your name and press Enter to exit:";
             currentInput = "";
             finished = false;
+
+            previousKBState = Keyboard.GetState();
         }
 
         public void Update(GameTime gameTime)
         {
-            KeyboardState keyboard = Keyboard.GetState();
-            foreach (Keys key in keyboard.GetPressedKeys())
+            KeyboardState currentKB = Keyboard.GetState();
+            foreach (Keys key in currentKB.GetPressedKeys())
             {
-                if (key >= Keys.A && key <= Keys.Z)
+                // Process key only if it was not pressed in the previous state.
+                if (!previousKBState.IsKeyDown(key))
                 {
-                    char c = (char)('A' + (key - Keys.A));
-                    if (!keyboard.IsKeyDown(Keys.LeftShift) && !keyboard.IsKeyDown(Keys.RightShift))
-                        c = char.ToLower(c);
-                    if (!currentInput.EndsWith(c.ToString()))
-                        currentInput += c;
-                }
-                else if (key >= Keys.D0 && key <= Keys.D9)
-                {
-                    char c = (char)('0' + (key - Keys.D0));
-                    if (!currentInput.EndsWith(c.ToString()))
-                        currentInput += c;
-                }
-                else if (key == Keys.Space)
-                {
-                    if (!currentInput.EndsWith(" "))
-                        currentInput += " ";
-                }
-                else if (key == Keys.Back && currentInput.Length > 0)
-                {
-                    currentInput = currentInput.Substring(0, currentInput.Length - 1);
-                }
-                else if (key == Keys.Enter)
-                {
-                    if (!string.IsNullOrWhiteSpace(currentInput))
+                    if (key >= Keys.A && key <= Keys.Z)
                     {
-                        SaveScore();
-                        finished = true;
+                        char c = (char)('A' + (key - Keys.A));
+                        if (!currentKB.IsKeyDown(Keys.LeftShift) && !currentKB.IsKeyDown(Keys.RightShift))
+                            c = char.ToLower(c);
+                        currentInput += c;
+                    }
+                    else if (key >= Keys.D0 && key <= Keys.D9)
+                    {
+                        char c = (char)('0' + (key - Keys.D0));
+                        currentInput += c;
+                    }
+                    else if (key == Keys.Space)
+                    {
+                        currentInput += " ";
+                    }
+                    else if (key == Keys.Back && currentInput.Length > 0)
+                    {
+                        currentInput = currentInput.Substring(0, currentInput.Length - 1);
+                    }
+                    else if (key == Keys.Enter)
+                    {
+                        if (!string.IsNullOrWhiteSpace(currentInput))
+                        {
+                            SaveScore();
+                            finished = true;
+                        }
                     }
                 }
             }
+            previousKBState = currentKB;
         }
 
         public void Draw(SpriteBatch spriteBatch, GraphicsDevice graphicsDevice)

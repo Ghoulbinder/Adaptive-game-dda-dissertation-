@@ -50,14 +50,14 @@ namespace Survivor_of_the_Bulge
         private DateTime sessionStartTime;
         // *** End Autosave/Scoreboard Fields ***
 
-        // New fields for dynamic difficulty.
+        // Dynamic difficulty controller from the DLL.
         private DynamicDifficultyController difficultyController;
         private DifficultyLevel previousDifficulty;
 
-        // New field for displaying a temporary difficulty notification.
+        // Temporary on-screen notification for difficulty changes.
         private DifficultyNotification difficultyNotification;
 
-        // New field for scoreboard state.
+        // Scoreboard state.
         private ScoreboardScreen scoreboardScreen;
 
         // Singleton reference.
@@ -94,7 +94,7 @@ namespace Survivor_of_the_Bulge
             deathsThisSession = 0;
             sessionStartTime = DateTime.Now;
 
-            // Initialize our dynamic difficulty controller.
+            // Initialize the dynamic difficulty controller.
             difficultyController = new DynamicDifficultyController();
             previousDifficulty = difficultyController.CurrentDifficulty;
 
@@ -313,13 +313,16 @@ namespace Survivor_of_the_Bulge
                         }
                     }
 
-                    // Spawn boss if kill count reaches the value from the difficulty controller and boss hasn't been spawned.
+                    // Spawn boss using dynamic thresholds and multipliers from the difficulty controller.
                     if (currentMap.KillCount >= difficultyController.BossSpawnThreshold && !currentMap.BossSpawned)
                     {
                         Vector2 bossPos = new Vector2(
                             (currentMap.Background.Width - 256) / 2,
                             (currentMap.Background.Height - 256) / 2
                         );
+
+                        int baseBossHealth = 300;
+                        int baseBossDamage = 15;
 
                         switch (currentState)
                         {
@@ -333,8 +336,8 @@ namespace Survivor_of_the_Bulge
                                         Content.Load<Texture2D>("Images/Projectile/bullet2"),
                                         bossPos,
                                         Boss.Direction.Up,
-                                        300,
-                                        15
+                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
+                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
                                     );
                                     currentMap.AddEnemy(greenBoss);
                                     currentMap.SetBossSpawned();
@@ -352,8 +355,8 @@ namespace Survivor_of_the_Bulge
                                         butterflyBulletHorizontal, butterflyBulletVertical,
                                         bossPos,
                                         Boss.Direction.Up,
-                                        300,
-                                        15
+                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
+                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
                                     );
                                     currentMap.AddEnemy(butterflyBoss);
                                     currentMap.SetBossSpawned();
@@ -374,8 +377,8 @@ namespace Survivor_of_the_Bulge
                                         dragonBulletVertical,
                                         bossPos,
                                         Boss.Direction.Up,
-                                        300,
-                                        15
+                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
+                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
                                     );
                                     currentMap.AddEnemy(dragonBoss);
                                     currentMap.SetBossSpawned();
@@ -406,8 +409,8 @@ namespace Survivor_of_the_Bulge
                                         Content.Load<Texture2D>("Images/Projectile/bullet2"),
                                         bossPos,
                                         Boss.Direction.Up,
-                                        300,
-                                        15
+                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
+                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
                                     );
                                     currentMap.AddEnemy(ogreBoss);
                                     currentMap.SetBossSpawned();
@@ -427,8 +430,8 @@ namespace Survivor_of_the_Bulge
                                         spiderBulletHorizontal, spiderBulletVertical,
                                         bossPos,
                                         Boss.Direction.Up,
-                                        300,
-                                        15
+                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
+                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
                                     );
                                     currentMap.AddEnemy(spiderBoss);
                                     currentMap.SetBossSpawned();
@@ -526,7 +529,7 @@ namespace Survivor_of_the_Bulge
                 {
                     difficultyNotification.Update(gameTime);
                     if (difficultyNotification.IsActive)
-                        difficultyNotification.Draw(_spriteBatch);
+                        difficultyNotification.Draw(_spriteBatch, GraphicsDevice.Viewport);
                     else
                         difficultyNotification = null;
                 }
@@ -540,6 +543,9 @@ namespace Survivor_of_the_Bulge
         // Call this method when game over is triggered (e.g., from Player.TakeDamage)
         public void GameOver()
         {
+            // Reset the dynamic difficulty to base settings (Normal) when game ends.
+            difficultyController.SetDifficulty(DifficultyLevel.Normal);
+
             currentState = GameState.Scoreboard;
             double timeSpent = (DateTime.Now - sessionStartTime).TotalSeconds;
             scoreboardScreen = new ScoreboardScreen(gameFont,

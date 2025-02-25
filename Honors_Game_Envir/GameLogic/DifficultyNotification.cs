@@ -25,10 +25,10 @@ namespace Survivor_of_the_Bulge
             timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Viewport viewport)
         {
             Vector2 textSize = font.MeasureString(message);
-            Vector2 position = new Vector2((spriteBatch.GraphicsDevice.Viewport.Width - textSize.X) / 2, 20);
+            Vector2 position = new Vector2((viewport.Width - textSize.X) / 2, 20);
             spriteBatch.DrawString(font, message, position, Color.Yellow);
         }
     }
