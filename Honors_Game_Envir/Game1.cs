@@ -80,6 +80,9 @@ namespace Survivor_of_the_Bulge
             InitializeTransitions();
             previousKeyboardState = Keyboard.GetState();
 
+            // Reset the difficulty settings to easy at startup.
+            DifficultyManager.Instance.ResetToEasy();
+
             // Load persistent game data.
             gameData = SaveLoadManager.LoadGameData();
 

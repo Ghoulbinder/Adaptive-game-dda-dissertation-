@@ -75,7 +75,7 @@ namespace Survivor_of_the_Bulge
             respawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // If there are less than 2 enemies and the respawn interval has passed, spawn a new enemy.
-            if (Enemies.Count < 2 && respawnTimer >= respawnInterval)
+            if (Enemies.Count < DifficultyManager.Instance.BaseEnemyCount && respawnTimer >= respawnInterval)
             {
                 if (enemyBack != null && enemyFront != null && enemyLeft != null &&
                     enemyBulletHorizontal != null && enemyBulletVertical != null)
