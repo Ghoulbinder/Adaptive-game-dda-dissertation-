@@ -9,7 +9,7 @@ namespace Survivor_of_the_Bulge
     {
         // The map's background texture.
         public Texture2D Background { get; private set; }
-        // List of enemies on this map.
+        // List of enemies currently present on the map.
         public List<Enemy> Enemies { get; private set; }
 
         // Internal flag and counter for boss spawning and enemy kills.
@@ -20,7 +20,7 @@ namespace Survivor_of_the_Bulge
         private float respawnTimer = 0f;
         private float respawnInterval = 1f; // New enemy spawns 1 second after a kill (if needed).
 
-        // Stored enemy spawn parameters so we can respawn new enemies.
+        // Stored enemy spawn parameters for creating new enemies.
         private Texture2D enemyBack;
         private Texture2D enemyFront;
         private Texture2D enemyLeft;
@@ -42,7 +42,8 @@ namespace Survivor_of_the_Bulge
         }
 
         /// <summary>
-        /// Marks that the boss has been spawned on this map.
+        /// Marks that a boss has been spawned on this map.
+        /// Once a boss is active, new enemies will not spawn.
         /// </summary>
         public void SetBossSpawned()
         {
@@ -50,7 +51,7 @@ namespace Survivor_of_the_Bulge
         }
 
         /// <summary>
-        /// Gets whether the boss has been spawned.
+        /// Gets whether a boss has been spawned on this map.
         /// </summary>
         public bool BossSpawned => bossSpawned;
 
@@ -68,13 +69,19 @@ namespace Survivor_of_the_Bulge
         public int KillCount => killCount;
 
         /// <summary>
-        /// Checks the respawn timer and, if fewer than 2 enemies are present, spawns a new enemy after the respawn interval.
+        /// Checks the respawn timer and spawns new enemies if:
+        /// - No boss is present.
+        /// - The current enemy count is below the difficulty cap (BaseEnemyCount).
+        /// Newly spawned enemies use the current difficulty multipliers.
         /// </summary>
         public void UpdateRespawn(GameTime gameTime)
         {
+            // Do not spawn new enemies if a boss is active.
+            if (bossSpawned)
+                return;
+
             respawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // If there are less than 2 enemies and the respawn interval has passed, spawn a new enemy.
             if (Enemies.Count < DifficultyManager.Instance.BaseEnemyCount && respawnTimer >= respawnInterval)
             {
                 if (enemyBack != null && enemyFront != null && enemyLeft != null &&
@@ -86,8 +93,10 @@ namespace Survivor_of_the_Bulge
                     Array dirs = Enum.GetValues(typeof(Enemy.Direction));
                     Enemy.Direction dir = (Enemy.Direction)dirs.GetValue(rng.Next(dirs.Length));
 
+                    // Base stats for enemy spawn.
                     int baseHealth = 50;
                     int baseDamage = 5;
+                    // Final stats based on current difficulty multipliers.
                     int finalHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
                     int finalDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
 
@@ -102,6 +111,8 @@ namespace Survivor_of_the_Bulge
                         finalHealth,
                         finalDamage
                     );
+                    // Store base stats so that future difficulty changes update this enemy.
+                    e.SetBaseStats(baseHealth, baseDamage);
                     AddEnemy(e);
                 }
                 respawnTimer = 0f;
@@ -109,7 +120,7 @@ namespace Survivor_of_the_Bulge
         }
 
         /// <summary>
-        /// Stores the enemy textures and bullet textures for respawning.
+        /// Stores the enemy and bullet textures used for spawning new enemies.
         /// </summary>
         public void SetEnemySpawnParameters(Texture2D back, Texture2D front, Texture2D left, Texture2D bulletHorizontal, Texture2D bulletVertical)
         {

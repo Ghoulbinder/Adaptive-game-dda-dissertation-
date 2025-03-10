@@ -118,28 +118,25 @@ namespace Survivor_of_the_Bulge
 
         public void TakeDamage(int amount)
         {
-            // Subtract damage from health.
             stats.Health -= amount;
             Debug.WriteLine($"Player took {amount} damage. Health now: {stats.Health}");
-
-            // Check if health drops to zero.
             if (stats.Health <= 0)
             {
                 if (stats.Lives > 1)
                 {
-                    // Player loses a life and health resets.
                     stats.Lives--;
                     stats.Health = _maxHealth;
                     Debug.WriteLine($"Player lost a life. Lives remaining: {stats.Lives}. Health reset to {_maxHealth}.");
                 }
                 else
                 {
-                    // No lives left: set the game over flag instead of immediately exiting.
-                    Debug.WriteLine("Player has died with no lives remaining.");
-                    IsGameOver = true;
+                    // On last life, set Lives to 0 so that Game1 detects game over.
+                    stats.Lives = 0;
+                    Debug.WriteLine("Player has died. No lives remaining.");
                 }
             }
         }
+
 
 
         // Method to gain experience.

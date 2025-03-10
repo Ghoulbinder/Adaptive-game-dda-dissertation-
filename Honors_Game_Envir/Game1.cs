@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using DDA_Tool;
+using DDA_Tool; // For the DLL types
 
 namespace Survivor_of_the_Bulge
 {
@@ -50,15 +50,17 @@ namespace Survivor_of_the_Bulge
         private DateTime sessionStartTime;
         // *** End Autosave/Scoreboard Fields ***
 
-        // Dynamic difficulty controller from the DLL.
-        private DynamicDifficultyController difficultyController;
+        // Track previous difficulty for on-screen notification.
         private DifficultyLevel previousDifficulty;
 
-        // Temporary on-screen notification for difficulty changes.
+        // On-screen notification for difficulty changes.
         private DifficultyNotification difficultyNotification;
 
-        // Scoreboard state.
-        private ScoreboardScreen scoreboardScreen;
+        // Scoreboard state is now a separate game state.
+        private ScoreboardState scoreboardState;
+
+        // To ensure GameOver() is triggered only once.
+        private bool gameOverTriggered = false;
 
         // Singleton reference.
         public static Game1 Instance { get; private set; }
@@ -80,8 +82,9 @@ namespace Survivor_of_the_Bulge
             InitializeTransitions();
             previousKeyboardState = Keyboard.GetState();
 
-            // Reset the difficulty settings to easy at startup.
-            DifficultyManager.Instance.ResetToEasy();
+            // Set default difficulty using our DifficultyManager.
+            DifficultyManager.Instance.SetDifficulty(DifficultyLevel.Default);
+            previousDifficulty = DifficultyManager.Instance.CurrentDifficulty;
 
             // Load persistent game data.
             gameData = SaveLoadManager.LoadGameData();
@@ -96,10 +99,6 @@ namespace Survivor_of_the_Bulge
             livesLostThisSession = 0;
             deathsThisSession = 0;
             sessionStartTime = DateTime.Now;
-
-            // Initialize the dynamic difficulty controller.
-            difficultyController = new DynamicDifficultyController();
-            previousDifficulty = difficultyController.CurrentDifficulty;
 
             base.Initialize();
         }
@@ -200,7 +199,7 @@ namespace Survivor_of_the_Bulge
             Texture2D enemyFront = Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking");
             Texture2D enemyLeft = Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking");
 
-            int initialEnemyCount = 2;
+            int initialEnemyCount = DifficultyManager.Instance.BaseEnemyCount; // should be 2 at Default.
             SpawnEnemiesForMap(maps[GameState.GreenForestCentre], initialEnemyCount,
                                enemyBack, enemyFront, enemyLeft,
                                enemyBulletHorizontal, enemyBulletVertical);
@@ -228,8 +227,8 @@ namespace Survivor_of_the_Bulge
 
                 int baseHealth = 50;
                 int baseDamage = 5;
-                int finalHealth = (int)(baseHealth * difficultyController.EnemyHealthMultiplier);
-                int finalDamage = (int)(baseDamage * difficultyController.EnemyDamageMultiplier);
+                int finalHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
+                int finalDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
 
                 Enemy e = new Enemy(
                     enemyBack,
@@ -242,6 +241,7 @@ namespace Survivor_of_the_Bulge
                     finalHealth,
                     finalDamage
                 );
+                e.SetBaseStats(baseHealth, baseDamage);
                 map.AddEnemy(e);
             }
         }
@@ -251,40 +251,51 @@ namespace Survivor_of_the_Bulge
             var currentKeyboardState = Keyboard.GetState();
 
             // Handle difficulty key input.
-            if (currentKeyboardState.IsKeyDown(Keys.D1))
+            if (currentKeyboardState.IsKeyDown(Keys.D0))
             {
-                difficultyController.HandleKeyInput('1');
+                DifficultyManager.Instance.HandleKeyInput('0');
+            }
+            else if (currentKeyboardState.IsKeyDown(Keys.D1))
+            {
+                DifficultyManager.Instance.HandleKeyInput('1');
             }
             else if (currentKeyboardState.IsKeyDown(Keys.D2))
             {
-                difficultyController.HandleKeyInput('2');
+                DifficultyManager.Instance.HandleKeyInput('2');
             }
             else if (currentKeyboardState.IsKeyDown(Keys.D3))
             {
-                difficultyController.HandleKeyInput('3');
+                DifficultyManager.Instance.HandleKeyInput('3');
             }
+
             // If difficulty changed, show notification.
-            if (difficultyController.CurrentDifficulty != previousDifficulty)
+            if (DifficultyManager.Instance.CurrentDifficulty != previousDifficulty)
             {
-                difficultyNotification = new DifficultyNotification("Game difficulty changed to " + difficultyController.CurrentDifficulty.ToString(), 5.0f, gameFont);
-                previousDifficulty = difficultyController.CurrentDifficulty;
+                difficultyNotification = new DifficultyNotification("Game difficulty changed to " + DifficultyManager.Instance.CurrentDifficulty.ToString(), 5.0f, gameFont);
+                previousDifficulty = DifficultyManager.Instance.CurrentDifficulty;
             }
 
-            if (currentKeyboardState.IsKeyDown(Keys.Tab) && previousKeyboardState.IsKeyUp(Keys.Tab))
-            {
-                isPaused = !isPaused;
-                IsMouseVisible = isPaused;
-            }
-
-            // Instead of exiting immediately, if Escape is pressed, signal game over.
-            if (currentKeyboardState.IsKeyDown(Keys.Escape))
+            // If Escape is pressed (edge detection) OR if player's lives are 0, trigger GameOver once.
+            if ((!gameOverTriggered && currentKeyboardState.IsKeyDown(Keys.Escape) && previousKeyboardState.IsKeyUp(Keys.Escape))
+                || (!gameOverTriggered && playerStats.Lives <= 0))
             {
                 GameOver();
+                gameOverTriggered = true;
+                return; // Early exit to avoid processing map logic
             }
 
             if (currentState == GameState.MainMenu && currentKeyboardState.IsKeyDown(Keys.Enter))
             {
                 currentState = GameState.GreenForestCentre;
+            }
+
+            if (currentState == GameState.Scoreboard)
+            {
+                // If we are in Scoreboard state, update only the scoreboard.
+                scoreboardState.Update(gameTime);
+                if (scoreboardState.Finished)
+                    Environment.Exit(0);
+                return; // Skip rest of update
             }
 
             if (isPaused)
@@ -293,195 +304,185 @@ namespace Survivor_of_the_Bulge
             }
             else if (currentState != GameState.MainMenu)
             {
-                if (currentState == GameState.Scoreboard)
+                var currentMap = maps[currentState];
+
+                player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
+                playerStats.UpdateHealth(player.Health);
+
+                // Remove dead enemies and update kill count.
+                for (int i = currentMap.Enemies.Count - 1; i >= 0; i--)
                 {
-                    scoreboardScreen.Update(gameTime);
-                    if (scoreboardScreen.Finished)
-                        Environment.Exit(0);
+                    if (currentMap.Enemies[i].IsDead)
+                    {
+                        currentMap.IncrementKillCount();
+                        currentMap.Enemies.RemoveAt(i);
+                    }
                 }
-                else
+
+                // Spawn boss if kill count exceeds threshold and boss is not spawned.
+                if (currentMap.KillCount >= DifficultyManager.Instance.BossSpawnThreshold && !currentMap.BossSpawned)
                 {
-                    var currentMap = maps[currentState];
+                    Vector2 bossPos = new Vector2(
+                        (currentMap.Background.Width - 256) / 2,
+                        (currentMap.Background.Height - 256) / 2
+                    );
 
-                    player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
-                    playerStats.UpdateHealth(player.Health);
+                    int baseBossHealth = 300;
+                    int baseBossDamage = 15;
 
-                    // Remove dead enemies and update kill count.
-                    for (int i = currentMap.Enemies.Count - 1; i >= 0; i--)
+                    switch (currentState)
                     {
-                        if (currentMap.Enemies[i].IsDead)
-                        {
-                            currentMap.IncrementKillCount();
-                            currentMap.Enemies.RemoveAt(i);
-                        }
-                    }
-
-                    // Spawn boss using dynamic thresholds and multipliers from the difficulty controller.
-                    if (currentMap.KillCount >= difficultyController.BossSpawnThreshold && !currentMap.BossSpawned)
-                    {
-                        Vector2 bossPos = new Vector2(
-                            (currentMap.Background.Width - 256) / 2,
-                            (currentMap.Background.Height - 256) / 2
-                        );
-
-                        int baseBossHealth = 300;
-                        int baseBossDamage = 15;
-
-                        switch (currentState)
-                        {
-                            case GameState.GreenForestCentre:
-                                {
-                                    GreenBoss greenBoss = new GreenBoss(
-                                        Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
-                                        Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
-                                        Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
-                                        Content.Load<Texture2D>("Images/Projectile/bullet"),
-                                        Content.Load<Texture2D>("Images/Projectile/bullet2"),
-                                        bossPos,
-                                        Boss.Direction.Up,
-                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
-                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
-                                    );
-                                    currentMap.AddEnemy(greenBoss);
-                                    currentMap.SetBossSpawned();
-                                    break;
-                                }
-                            case GameState.ForestTop:
-                                {
-                                    Texture2D bossAttack = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
-                                    Texture2D bossWalking = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossWalking/ButterflyBossWalkingDown");
-                                    Texture2D butterflyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/butterfly_attack");
-                                    Texture2D butterflyBulletVertical = Content.Load<Texture2D>("Images/Projectile/butterfly_attack2");
-                                    ButterflyBoss butterflyBoss = new ButterflyBoss(
-                                        bossAttack,
-                                        bossWalking,
-                                        butterflyBulletHorizontal, butterflyBulletVertical,
-                                        bossPos,
-                                        Boss.Direction.Up,
-                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
-                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
-                                    );
-                                    currentMap.AddEnemy(butterflyBoss);
-                                    currentMap.SetBossSpawned();
-                                    break;
-                                }
-                            case GameState.ForestRight:
-                                {
-                                    Texture2D dragonIdle = Content.Load<Texture2D>("Dragon_Boss/DragoBossIdle/DragoBossIdleDown");
-                                    Texture2D dragonAttack = Content.Load<Texture2D>("Dragon_Boss/DragoBossAttack/DragoBossAttackDown");
-                                    Texture2D dragonWalking = Content.Load<Texture2D>("Dragon_Boss/DragoBossWalking/DragoBossWalkingDown");
-                                    Texture2D dragonBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball");
-                                    Texture2D dragonBulletVertical = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball2");
-                                    DragonBoss dragonBoss = new DragonBoss(
-                                        dragonIdle,
-                                        dragonAttack,
-                                        dragonWalking,
-                                        dragonBulletHorizontal,
-                                        dragonBulletVertical,
-                                        bossPos,
-                                        Boss.Direction.Up,
-                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
-                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
-                                    );
-                                    currentMap.AddEnemy(dragonBoss);
-                                    currentMap.SetBossSpawned();
-                                    break;
-                                }
-                            case GameState.ForestButtom:
-                                {
-                                    Texture2D ogreIdleUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleUp");
-                                    Texture2D ogreIdleDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleDown");
-                                    Texture2D ogreIdleLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleLeft");
-                                    Texture2D ogreIdleRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleRight");
-
-                                    Texture2D ogreAttackUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackUp");
-                                    Texture2D ogreAttackDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackDown");
-                                    Texture2D ogreAttackLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackLeft");
-                                    Texture2D ogreAttackRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackRight");
-
-                                    Texture2D ogreWalkingUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingUp");
-                                    Texture2D ogreWalkingDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingDown");
-                                    Texture2D ogreWalkingLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingLeft");
-                                    Texture2D ogreWalkingRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingRight");
-
-                                    OgreBoss ogreBoss = new OgreBoss(
-                                        ogreIdleUp, ogreIdleDown, ogreIdleLeft, ogreIdleRight,
-                                        ogreAttackUp, ogreAttackDown, ogreAttackLeft, ogreAttackRight,
-                                        ogreWalkingUp, ogreWalkingDown, ogreWalkingLeft, ogreWalkingRight,
-                                        Content.Load<Texture2D>("Images/Projectile/bullet"),
-                                        Content.Load<Texture2D>("Images/Projectile/bullet2"),
-                                        bossPos,
-                                        Boss.Direction.Up,
-                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
-                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
-                                    );
-                                    currentMap.AddEnemy(ogreBoss);
-                                    currentMap.SetBossSpawned();
-                                    break;
-                                }
-                            case GameState.ForestLeft:
-                                {
-                                    Texture2D spiderIdle = Content.Load<Texture2D>("Spider_Boss/SpiderBossIdle/SpiderBossIdleDown");
-                                    Texture2D spiderAttack = Content.Load<Texture2D>("Spider_Boss/SpiderBossAttack/SpiderBossAttackDown");
-                                    Texture2D spiderWalking = Content.Load<Texture2D>("Spider_Boss/SpiderBossWalking/SpiderBossWalkingDown");
-                                    Texture2D spiderBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/spider_attack");
-                                    Texture2D spiderBulletVertical = Content.Load<Texture2D>("Images/Projectile/spider_attack2");
-                                    SpiderBoss spiderBoss = new SpiderBoss(
-                                        spiderIdle,
-                                        spiderAttack,
-                                        spiderWalking,
-                                        spiderBulletHorizontal, spiderBulletVertical,
-                                        bossPos,
-                                        Boss.Direction.Up,
-                                        (int)(baseBossHealth * difficultyController.BossHealthMultiplier),
-                                        (int)(baseBossDamage * difficultyController.BossDamageMultiplier)
-                                    );
-                                    currentMap.AddEnemy(spiderBoss);
-                                    currentMap.SetBossSpawned();
-                                    break;
-                                }
-                        }
-                    }
-
-                    // Update enemies.
-                    foreach (var enemy in currentMap.Enemies)
-                    {
-                        enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport, player.Position, player);
-                    }
-
-                    currentMap.UpdateRespawn(gameTime);
-
-                    foreach (var leaf in fallingLeaves)
-                        leaf.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
-                    foreach (var snow in snowFlakes)
-                        snow.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
-
-                    // Process map transitions.
-                    foreach (var transition in transitions)
-                    {
-                        if (transition.From == currentState && transition.Zone.Intersects(player.Bounds))
-                        {
-                            if (maps.ContainsKey(transition.To))
+                        case GameState.GreenForestCentre:
                             {
-                                var newMap = maps[transition.To];
-                                currentState = transition.To;
-                                // Center the player in the new map.
-                                player.Position = new Vector2(newMap.Background.Width / 2f, newMap.Background.Height / 2f);
+                                GreenBoss greenBoss = new GreenBoss(
+                                    Content.Load<Texture2D>("Images/Enemy/enemyBackWalking"),
+                                    Content.Load<Texture2D>("Images/Enemy/enemyFrontWalking"),
+                                    Content.Load<Texture2D>("Images/Enemy/enemyLeftWalking"),
+                                    Content.Load<Texture2D>("Images/Projectile/bullet"),
+                                    Content.Load<Texture2D>("Images/Projectile/bullet2"),
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    (int)(baseBossHealth * DifficultyManager.Instance.BossHealthMultiplier),
+                                    (int)(baseBossDamage * DifficultyManager.Instance.BossDamageMultiplier)
+                                );
+                                currentMap.AddEnemy(greenBoss);
+                                currentMap.SetBossSpawned();
+                                break;
                             }
-                            break;
-                        }
+                        case GameState.ForestTop:
+                            {
+                                Texture2D bossAttack = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossAttack/ButterflyBossDown");
+                                Texture2D bossWalking = Content.Load<Texture2D>("Butterfly_Boss/ButterflyBossWalking/ButterflyBossWalkingDown");
+                                Texture2D butterflyBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/butterfly_attack");
+                                Texture2D butterflyBulletVertical = Content.Load<Texture2D>("Images/Projectile/butterfly_attack2");
+                                ButterflyBoss butterflyBoss = new ButterflyBoss(
+                                    bossAttack,
+                                    bossWalking,
+                                    butterflyBulletHorizontal, butterflyBulletVertical,
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    (int)(baseBossHealth * DifficultyManager.Instance.BossHealthMultiplier),
+                                    (int)(baseBossDamage * DifficultyManager.Instance.BossDamageMultiplier)
+                                );
+                                currentMap.AddEnemy(butterflyBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                        case GameState.ForestRight:
+                            {
+                                Texture2D dragonIdle = Content.Load<Texture2D>("Dragon_Boss/DragoBossIdle/DragoBossIdleDown");
+                                Texture2D dragonAttack = Content.Load<Texture2D>("Dragon_Boss/DragoBossAttack/DragoBossAttackDown");
+                                Texture2D dragonWalking = Content.Load<Texture2D>("Dragon_Boss/DragoBossWalking/DragoBossWalkingDown");
+                                Texture2D dragonBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball");
+                                Texture2D dragonBulletVertical = Content.Load<Texture2D>("Images/Projectile/Dragon_Fireball2");
+                                DragonBoss dragonBoss = new DragonBoss(
+                                    dragonIdle,
+                                    dragonAttack,
+                                    dragonWalking,
+                                    dragonBulletHorizontal,
+                                    dragonBulletVertical,
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    (int)(baseBossHealth * DifficultyManager.Instance.BossHealthMultiplier),
+                                    (int)(baseBossDamage * DifficultyManager.Instance.BossDamageMultiplier)
+                                );
+                                currentMap.AddEnemy(dragonBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                        case GameState.ForestButtom:
+                            {
+                                Texture2D ogreIdleUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleUp");
+                                Texture2D ogreIdleDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleDown");
+                                Texture2D ogreIdleLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleLeft");
+                                Texture2D ogreIdleRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossIdle/OgreBossIdleRight");
+
+                                Texture2D ogreAttackUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackUp");
+                                Texture2D ogreAttackDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackDown");
+                                Texture2D ogreAttackLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackLeft");
+                                Texture2D ogreAttackRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossAttack/OgreBossAttackRight");
+
+                                Texture2D ogreWalkingUp = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingUp");
+                                Texture2D ogreWalkingDown = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingDown");
+                                Texture2D ogreWalkingLeft = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingLeft");
+                                Texture2D ogreWalkingRight = Content.Load<Texture2D>("Ogre_Boss/OgreBossWalking/OgreBossWalkingRight");
+
+                                OgreBoss ogreBoss = new OgreBoss(
+                                    ogreIdleUp, ogreIdleDown, ogreIdleLeft, ogreIdleRight,
+                                    ogreAttackUp, ogreAttackDown, ogreAttackLeft, ogreAttackRight,
+                                    ogreWalkingUp, ogreWalkingDown, ogreWalkingLeft, ogreWalkingRight,
+                                    Content.Load<Texture2D>("Images/Projectile/bullet"),
+                                    Content.Load<Texture2D>("Images/Projectile/bullet2"),
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    (int)(baseBossHealth * DifficultyManager.Instance.BossHealthMultiplier),
+                                    (int)(baseBossDamage * DifficultyManager.Instance.BossDamageMultiplier)
+                                );
+                                currentMap.AddEnemy(ogreBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
+                        case GameState.ForestLeft:
+                            {
+                                Texture2D spiderIdle = Content.Load<Texture2D>("Spider_Boss/SpiderBossIdle/SpiderBossIdleDown");
+                                Texture2D spiderAttack = Content.Load<Texture2D>("Spider_Boss/SpiderBossAttack/SpiderBossAttackDown");
+                                Texture2D spiderWalking = Content.Load<Texture2D>("Spider_Boss/SpiderBossWalking/SpiderBossWalkingDown");
+                                Texture2D spiderBulletHorizontal = Content.Load<Texture2D>("Images/Projectile/spider_attack");
+                                Texture2D spiderBulletVertical = Content.Load<Texture2D>("Images/Projectile/spider_attack2");
+                                SpiderBoss spiderBoss = new SpiderBoss(
+                                    spiderIdle,
+                                    spiderAttack,
+                                    spiderWalking,
+                                    spiderBulletHorizontal, spiderBulletVertical,
+                                    bossPos,
+                                    Boss.Direction.Up,
+                                    (int)(baseBossHealth * DifficultyManager.Instance.BossHealthMultiplier),
+                                    (int)(baseBossDamage * DifficultyManager.Instance.BossDamageMultiplier)
+                                );
+                                currentMap.AddEnemy(spiderBoss);
+                                currentMap.SetBossSpawned();
+                                break;
+                            }
                     }
                 }
 
-                if (currentState != GameState.Scoreboard)
-                    previousKeyboardState = currentKeyboardState;
+                // Update enemies.
+                foreach (var enemy in currentMap.Enemies)
+                    enemy.Update(gameTime, _graphics.GraphicsDevice.Viewport, player.Position, player);
+
+                currentMap.UpdateRespawn(gameTime);
+
+                foreach (var leaf in fallingLeaves)
+                    leaf.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+                foreach (var snow in snowFlakes)
+                    snow.Update(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+
+                // Process map transitions.
+                foreach (var transition in transitions)
+                {
+                    if (transition.From == currentState && transition.Zone.Intersects(player.Bounds))
+                    {
+                        if (maps.ContainsKey(transition.To))
+                        {
+                            var newMap = maps[transition.To];
+                            currentState = transition.To;
+                            // Center the player in the new map.
+                            player.Position = new Vector2(newMap.Background.Width / 2f, newMap.Background.Height / 2f);
+                        }
+                        break;
+                    }
+                }
             }
 
             if (currentState == GameState.Scoreboard)
             {
-                scoreboardScreen.Update(gameTime);
-                if (scoreboardScreen.Finished)
+                scoreboardState.Update(gameTime);
+                if (scoreboardState.Finished)
                     Environment.Exit(0);
+            }
+            else
+            {
+                previousKeyboardState = currentKeyboardState;
             }
 
             base.Update(gameTime);
@@ -491,7 +492,7 @@ namespace Survivor_of_the_Bulge
         {
             if (currentState == GameState.Scoreboard)
             {
-                scoreboardScreen.Draw(_spriteBatch, GraphicsDevice);
+                scoreboardState.Draw(_spriteBatch, GraphicsDevice);
             }
             else
             {
@@ -505,34 +506,31 @@ namespace Survivor_of_the_Bulge
 
                     string introStory =
                         @"In the twilight of war, you were a hardened soldier in the Battle of the Bulge.
-                        Your mission was daring, to infiltrate a secret Nazi stronghold and plant enchanted bombs 
-                        deep within its iron heart. Along the way, you witnessed visions of eerie, otherworldly marvels, 
-                        creatures and phenomena that defied mortal understanding.
-                        
-                        When the alarms blared and your escape was cut off, you ignited the bombs in a desperate act of defiance.
-                        In the ensuing cataclysm, reality itself shattered.
-                        You awoke to find that you had been transformed, no longer a mere soldier, but a fierce huntress 
-                        wielding a mystical bow with uncanny precision.
-                        
-                        Now, in a forest pulsing with ancient magic, spectral German soldiers march as if haunted by the past,
-                        and dark, powerful entities lurk in the shadows. Trapped in a relentless time loop, your destiny 
-                        is entwined with supernatural forces that challenge every fiber of your being.
-                        
-                        Can you unravel the mystery of your transformation and restore the balance between worlds?
-                        
-                        Press Enter to step into the legend...";
+Your mission was daring, to infiltrate a secret Nazi stronghold and plant enchanted bombs 
+deep within its iron heart. Along the way, you witnessed visions of eerie, otherworldly marvels, 
+creatures and phenomena that defied mortal understanding.
+
+When the alarms blared and your escape was cut off, you ignited the bombs in a desperate act of defiance.
+In the ensuing cataclysm, reality itself shattered.
+You awoke to find that you had been transformed, no longer a mere soldier, but a fierce huntress 
+wielding a mystical bow with uncanny precision.
+
+Now, in a forest pulsing with ancient magic, spectral German soldiers march as if haunted by the past,
+and dark, powerful entities lurk in the shadows. Trapped in a relentless time loop, your destiny 
+is entwined with supernatural forces that challenge every fiber of your being.
+
+Can you unravel the mystery of your transformation and restore the balance between worlds?
+
+Press Enter to step into the legend...";
 
                     Vector2 textSize = gameFont.MeasureString(introStory);
                     float margin = 50f;
-                    // X position: right-aligned with a margin.
                     float posX = GraphicsDevice.Viewport.Width - textSize.X - margin;
-                    // Y position: centered vertically.
                     float posY = (GraphicsDevice.Viewport.Height - textSize.Y) / 2;
                     Vector2 position = new Vector2(posX, posY);
 
                     _spriteBatch.DrawString(gameFont, introStory, position, Color.Yellow);
                 }
-
                 else
                 {
                     var currentMap = maps[currentState];
@@ -573,15 +571,15 @@ namespace Survivor_of_the_Bulge
             base.Draw(gameTime);
         }
 
-        // Call this method when game over is triggered (e.g., from Player.TakeDamage)
+        // Call this method when game over is triggered.
         public void GameOver()
         {
-            // Reset the dynamic difficulty to base settings (Normal) when game ends.
-            difficultyController.SetDifficulty(DifficultyLevel.Normal);
+            // Reset dynamic difficulty to Normal.
+            DifficultyManager.Instance.SetDifficulty(DifficultyLevel.Normal);
 
             currentState = GameState.Scoreboard;
             double timeSpent = (DateTime.Now - sessionStartTime).TotalSeconds;
-            scoreboardScreen = new ScoreboardScreen(gameFont,
+            scoreboardState = new ScoreboardState(gameFont,
                 timeSpent,
                 bulletsFiredThisSession,
                 bulletsUsedAgainstEnemiesThisSession,

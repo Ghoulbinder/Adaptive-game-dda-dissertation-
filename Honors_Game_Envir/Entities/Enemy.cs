@@ -7,22 +7,20 @@ using System.Diagnostics;
 
 namespace Survivor_of_the_Bulge
 {
-
     public class Enemy
     {
-        // Textures for movement – these are the “enemy” sprites.
+        // Textures for movement.
         protected Texture2D backTexture, frontTexture, leftTexture;
         protected Texture2D bulletHorizontalTexture, bulletVerticalTexture;
 
         public Vector2 Position;
         public float MovementSpeed { get; set; } = 100f;
+        // Current Health (remains after damage).
         public int Health { get; protected set; }
         public int BulletDamage { get; set; } = 5;
         public float FiringInterval { get; set; } = 2f;
         public float BulletRange { get; set; } = 1000f;
         public int CollisionDamage { get; set; } = 15;
-        public float CollisionDamageInterval { get; set; } = 1f;
-
         protected float timeSinceLastShot = 0f;
         protected float collisionDamageTimer = 0f;
 
@@ -39,25 +37,14 @@ namespace Survivor_of_the_Bulge
         public enum Direction { Left, Right, Up, Down }
         protected EnemyState currentState;
         protected Direction currentDirection;
-
         protected const int CollisionPadding = 5;
         protected float shootingRange = 200f;
         protected float chaseRange = 400f;
 
-        // Experience modifications.
         public int ExperienceReward { get; set; } = 10;
         private bool experienceAwarded = false;
 
-        protected void AwardExperience(Player player)
-        {
-            if (!experienceAwarded)
-            {
-                player.GainExperience(ExperienceReward);
-                experienceAwarded = true;
-            }
-        }
-
-        // Use a center-based bounding box.
+        // Center-based bounding box.
         public virtual Rectangle Bounds
         {
             get
@@ -70,6 +57,10 @@ namespace Survivor_of_the_Bulge
 
         public bool IsDead => isDead;
         protected bool isDead = false;
+
+        // Base stats stored on spawn.
+        protected int baseHealth;
+        protected int baseDamage;
 
         public Enemy(Texture2D back, Texture2D front, Texture2D left,
                      Texture2D bulletHorizontal, Texture2D bulletVertical,
@@ -87,6 +78,9 @@ namespace Survivor_of_the_Bulge
             Health = health;
             BulletDamage = bulletDamage;
 
+            baseHealth = health;
+            baseDamage = bulletDamage;
+
             MovementSpeed = 100f;
             bulletSpeed = 300f;
             frameTime = 0.1f;
@@ -96,15 +90,40 @@ namespace Survivor_of_the_Bulge
             currentFrame = 0;
             int frameW = leftTexture.Width / totalFrames;
             sourceRectangle = new Rectangle(0, 0, frameW, leftTexture.Height);
-
             bullets = new List<Bullet>();
             currentState = EnemyState.Patrol;
+        }
+
+        /// <summary>
+        /// Store base health and damage values.
+        /// </summary>
+        public void SetBaseStats(int health, int damage)
+        {
+            baseHealth = health;
+            baseDamage = damage;
+        }
+
+        /// <summary>
+        /// Applies difficulty modifiers to MovementSpeed and BulletDamage.
+        /// Also, if the current Health exceeds the new maximum (baseHealth × multiplier), reduce it.
+        /// </summary>
+        public void ApplyDifficultyModifiers()
+        {
+            MovementSpeed = 100f * DifficultyManager.Instance.EnemySpeedMultiplier;
+            BulletDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
+
+            int newMaxHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
+            if (Health > newMaxHealth)
+                Health = newMaxHealth;
         }
 
         public virtual void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
             if (isDead)
                 return;
+
+            // Update speed, damage, and adjust health if necessary.
+            ApplyDifficultyModifiers();
 
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             float distance = Vector2.Distance(Position, playerPosition);
@@ -193,7 +212,15 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        // IMPORTANT: This Draw method is now virtual.
+        protected void AwardExperience(Player player)
+        {
+            if (!experienceAwarded)
+            {
+                player.GainExperience(ExperienceReward);
+                experienceAwarded = true;
+            }
+        }
+
         public virtual void Draw(SpriteBatch spriteBatch)
         {
             if (isDead)
@@ -218,6 +245,7 @@ namespace Survivor_of_the_Bulge
                     break;
             }
             spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
+
             foreach (var bullet in bullets)
             {
                 bullet.Draw(spriteBatch);
@@ -264,7 +292,7 @@ namespace Survivor_of_the_Bulge
                     bulletDirection = new Vector2(1, 0);
                     break;
             }
-            Vector2 bulletPos = Position; // Spawn at center.
+            Vector2 bulletPos = Position;
             Bullet bullet = new Bullet(
                 (currentDirection == Direction.Left || currentDirection == Direction.Right) ? bulletHorizontalTexture : bulletVerticalTexture,
                 bulletPos,

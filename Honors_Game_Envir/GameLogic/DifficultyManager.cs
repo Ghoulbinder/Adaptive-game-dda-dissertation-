@@ -1,51 +1,113 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using DDA_Tool;  // Import the DLL's namespace
 
 namespace Survivor_of_the_Bulge
 {
-    // A singleton class that holds parameters used to adjust game difficulty dynamically.
+    // Local enum that includes Default along with the DLL's Easy/Normal/Hard.
+    public enum DifficultyLevel { Default, Easy, Normal, Hard }
+
+    // Singleton class that holds parameters used to adjust game difficulty dynamically.
+    // It reads enemy count and multipliers from the DLL's DynamicDifficultyController.
     public class DifficultyManager
     {
-        // Singleton instance.
         private static DifficultyManager _instance;
         public static DifficultyManager Instance => _instance ?? (_instance = new DifficultyManager());
 
-        // Current difficulty level (e.g., 1 for easy, 2 for medium, etc.).
-        public int Level { get; private set; } = 1;
+        // The current difficulty level.
+        public DifficultyLevel CurrentDifficulty { get; private set; } = DifficultyLevel.Default;
 
-        // Base parameters that are adjusted as difficulty increases.
-        public int BaseEnemyCount { get; private set; } = 2;
-        public float EnemyHealthMultiplier { get; private set; } = 1f;
-        public float EnemySpeedMultiplier { get; private set; } = 1f;
-        public float EnemyDamageMultiplier { get; private set; } = 1f;
-        public float SpawnRateMultiplier { get; private set; } = 1f;
+        // Properties for enemy parameters.
+        public int BaseEnemyCount { get; private set; }
+        public float EnemyHealthMultiplier { get; private set; }
+        public float EnemySpeedMultiplier { get; private set; }
+        public float EnemyDamageMultiplier { get; private set; }
+        public float SpawnRateMultiplier { get; private set; }
 
-        // Private constructor so the class can only be instantiated via Instance.
-        private DifficultyManager() { }
+        // Additional properties for boss parameters.
+        public int BossSpawnThreshold { get; private set; }
+        public float BossHealthMultiplier { get; private set; }
+        public float BossDamageMultiplier { get; private set; }
 
-        // Increase difficulty: call this method to raise difficulty (e.g., new wave).
-        public void IncreaseDifficulty()
+        // Instance of the DLL's DynamicDifficultyController.
+        private DynamicDifficultyController dynamicController;
+
+        // Private constructor – initialize with Default difficulty.
+        private DifficultyManager()
         {
-            Level++;
-            BaseEnemyCount += 2;              // Increase the number of enemies per map.
-            EnemyHealthMultiplier += 0.2f;      // Increase enemy health.
-            EnemySpeedMultiplier += 0.1f;       // Increase enemy speed.
-            EnemyDamageMultiplier += 0.1f;      // Increase enemy bullet damage.
-            SpawnRateMultiplier += 0.1f;        // Optionally, make enemies spawn faster.
+            dynamicController = new DynamicDifficultyController();
+            SetDifficulty(DifficultyLevel.Default);
         }
 
-        // Reset all difficulty parameters to their easy defaults.
-        public void ResetToEasy()
+        /// <summary>
+        /// Sets the difficulty level.
+        /// For Default, preset values are used.
+        /// For Easy, Normal, and Hard, the values come from the DLL.
+        /// </summary>
+        public void SetDifficulty(DifficultyLevel level)
         {
-            Level = 1;
-            BaseEnemyCount = 2;
-            EnemyHealthMultiplier = 1f;
-            EnemySpeedMultiplier = 1f;
-            EnemyDamageMultiplier = 1f;
-            SpawnRateMultiplier = 1f;
+            CurrentDifficulty = level;
+            switch (level)
+            {
+                case DifficultyLevel.Default:
+                    BaseEnemyCount = 2;
+                    EnemyHealthMultiplier = 0.8f;
+                    EnemySpeedMultiplier = 0.8f;
+                    EnemyDamageMultiplier = 0.8f;
+                    SpawnRateMultiplier = 1f;
+                    BossSpawnThreshold = 2; // preset for Default
+                    BossHealthMultiplier = 0.8f;
+                    BossDamageMultiplier = 0.8f;
+                    break;
+                case DifficultyLevel.Easy:
+                    dynamicController.SetDifficulty(DDA_Tool.DifficultyLevel.Easy);
+                    BaseEnemyCount = dynamicController.BossSpawnThreshold;  // Expected 8 for Easy
+                    EnemyHealthMultiplier = dynamicController.EnemyHealthMultiplier;         // 1.0f
+                    EnemySpeedMultiplier = dynamicController.EnemyMovementSpeedMultiplier;     // 1.0f
+                    EnemyDamageMultiplier = dynamicController.EnemyDamageMultiplier;           // 1.0f
+                    SpawnRateMultiplier = 1f;
+                    BossSpawnThreshold = dynamicController.BossSpawnThreshold;                // Expected 8 for Easy
+                    BossHealthMultiplier = dynamicController.BossHealthMultiplier;            // 1.0f
+                    BossDamageMultiplier = dynamicController.BossDamageMultiplier;            // 1.0f
+                    break;
+                case DifficultyLevel.Normal:
+                    dynamicController.SetDifficulty(DDA_Tool.DifficultyLevel.Normal);
+                    BaseEnemyCount = dynamicController.BossSpawnThreshold;  // Expected 15 for Normal
+                    EnemyHealthMultiplier = dynamicController.EnemyHealthMultiplier;         // 1.5f
+                    EnemySpeedMultiplier = dynamicController.EnemyMovementSpeedMultiplier;     // 1.5f
+                    EnemyDamageMultiplier = dynamicController.EnemyDamageMultiplier;           // 1.5f
+                    SpawnRateMultiplier = 1f;
+                    BossSpawnThreshold = dynamicController.BossSpawnThreshold;                // Expected 15 for Normal
+                    BossHealthMultiplier = dynamicController.BossHealthMultiplier;            // 1.5f
+                    BossDamageMultiplier = dynamicController.BossDamageMultiplier;            // 1.5f
+                    break;
+                case DifficultyLevel.Hard:
+                    dynamicController.SetDifficulty(DDA_Tool.DifficultyLevel.Hard);
+                    BaseEnemyCount = dynamicController.BossSpawnThreshold;  // Expected 25 for Hard
+                    EnemyHealthMultiplier = dynamicController.EnemyHealthMultiplier;         // 2.0f
+                    EnemySpeedMultiplier = dynamicController.EnemyMovementSpeedMultiplier;     // 2.0f
+                    EnemyDamageMultiplier = dynamicController.EnemyDamageMultiplier;           // 2.0f
+                    SpawnRateMultiplier = 1f;
+                    BossSpawnThreshold = dynamicController.BossSpawnThreshold;                // Expected 25 for Hard
+                    BossHealthMultiplier = dynamicController.BossHealthMultiplier;            // 2.0f
+                    BossDamageMultiplier = dynamicController.BossDamageMultiplier;            // 2.0f
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Processes key input to set the difficulty.
+        /// '0' for Default, '1' for Easy, '2' for Normal, '3' for Hard.
+        /// </summary>
+        public void HandleKeyInput(char keyChar)
+        {
+            if (keyChar == '0')
+                SetDifficulty(DifficultyLevel.Default);
+            else if (keyChar == '1')
+                SetDifficulty(DifficultyLevel.Easy);
+            else if (keyChar == '2')
+                SetDifficulty(DifficultyLevel.Normal);
+            else if (keyChar == '3')
+                SetDifficulty(DifficultyLevel.Hard);
         }
     }
 }

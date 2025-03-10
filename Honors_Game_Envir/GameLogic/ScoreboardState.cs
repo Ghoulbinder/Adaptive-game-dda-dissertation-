@@ -5,7 +5,8 @@ using System;
 
 namespace Survivor_of_the_Bulge
 {
-    public class ScoreboardScreen
+    // This class now serves as a game state for the scoreboard.
+    public class ScoreboardState
     {
         private SpriteFont font;
         private string promptText;
@@ -27,7 +28,8 @@ namespace Survivor_of_the_Bulge
 
         private KeyboardState previousKBState;
 
-        public ScoreboardScreen(SpriteFont font, double timeSpent, int bulletsFired, int bulletsUsedEnemies, int bulletsUsedBosses, int livesLost, int currentScore, int currentLevel, int currentLives, int deaths, GameData gameData)
+        public ScoreboardState(SpriteFont font, double timeSpent, int bulletsFired, int bulletsUsedEnemies, int bulletsUsedBosses,
+                               int livesLost, int currentScore, int currentLevel, int currentLives, int deaths, GameData gameData)
         {
             this.font = font;
             this.timeSpent = timeSpent;

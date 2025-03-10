@@ -5,6 +5,7 @@ namespace Survivor_of_the_Bulge
 {
     public class Boss : Enemy
     {
+        // Boss-specific scaling factor.
         public float Scale { get; set; } = 2.0f;
 
         public Boss(Texture2D back, Texture2D front, Texture2D left,
@@ -48,7 +49,7 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        // Override Draw method.
+        // Override Draw to apply custom scaling.
         public override void Draw(SpriteBatch spriteBatch)
         {
             if (IsDead) return;
