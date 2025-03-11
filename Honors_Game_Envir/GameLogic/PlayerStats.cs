@@ -14,6 +14,9 @@ namespace Survivor_of_the_Bulge
         public int Level { get; set; }
         public int LevelUpThreshold { get; set; } = 100;
 
+        // New property to track total damage taken.
+        public int TotalDamageTaken { get; set; }
+
         private SpriteFont font;
 
         public PlayerStats(int health, int lives, int attackDamage, float attackSpeed, float movementSpeed, int experience, int level, SpriteFont font)
@@ -26,6 +29,7 @@ namespace Survivor_of_the_Bulge
             Experience = experience;
             Level = level;
             this.font = font;
+            TotalDamageTaken = 0; // Initialize total damage taken to zero.
         }
 
         public void IncreaseExperience(int amount)
@@ -49,12 +53,24 @@ namespace Survivor_of_the_Bulge
 
         public void UpdateHealth(int newHealth)
         {
+            // If newHealth is lower than current Health, calculate the damage taken.
+            if (newHealth < Health)
+            {
+                TotalDamageTaken += (Health - newHealth);
+            }
             Health = newHealth;
         }
 
         public void Draw(SpriteBatch spriteBatch, Vector2 position)
         {
-            string statsText = $"Health: {Health}\nLives: {Lives}\nAttack Damage: {AttackDamage}\nAttack Speed: {AttackSpeed}\nMovement Speed: {MovementSpeed}\nExp: {Experience}\nLevel: {Level}";
+            string statsText = $"Health: {Health}\n" +
+                               $"Lives: {Lives}\n" +
+                               $"Attack Damage: {AttackDamage}\n" +
+                               $"Attack Speed: {AttackSpeed}\n" +
+                               $"Movement Speed: {MovementSpeed}\n" +
+                               $"Exp: {Experience}\n" +
+                               $"Level: {Level}\n" +
+                               $"Damage Taken: {TotalDamageTaken}";
             spriteBatch.DrawString(font, statsText, position, Color.Black);
         }
     }

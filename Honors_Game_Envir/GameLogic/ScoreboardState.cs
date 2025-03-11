@@ -28,6 +28,9 @@ namespace Survivor_of_the_Bulge
 
         private KeyboardState previousKBState;
 
+        // Public property to expose the player's entered name.
+        public string PlayerName => currentInput;
+
         public ScoreboardState(SpriteFont font, double timeSpent, int bulletsFired, int bulletsUsedEnemies, int bulletsUsedBosses,
                                int livesLost, int currentScore, int currentLevel, int currentLives, int deaths, GameData gameData)
         {
@@ -56,6 +59,7 @@ namespace Survivor_of_the_Bulge
             previousKBState = Keyboard.GetState();
         }
 
+        // Update method processes keyboard input for entering the player's name.
         public void Update(GameTime gameTime)
         {
             KeyboardState currentKB = Keyboard.GetState();
@@ -138,6 +142,32 @@ namespace Survivor_of_the_Bulge
             gameData.Sessions.Add(session);
             gameData.Scoreboard.Add(entry);
             SaveLoadManager.SaveGameData(gameData);
+
+            // Create and append a debug log entry using the entered player's name.
+            DebugLogEntry logEntry = new DebugLogEntry
+            {
+                PlayerName = currentInput,
+                DifficultyLevel = DifficultyManager.Instance.CurrentDifficulty,
+                EnemiesKilled = Game1.Instance.CurrentMap != null ? Game1.Instance.CurrentMap.KillCount : 0,
+                BossesKilled = Game1.Instance.GetBossCount(),
+                TimeTakenSeconds = (DateTime.Now - Game1.Instance.SessionStartTime).TotalSeconds,
+                TotalDamageTaken = Game1.Instance.PlayerStatsInstance.TotalDamageTaken,
+                BulletsFired = Game1.Instance.bulletsFiredThisSession,
+                BulletsUsedAgainstEnemies = Game1.Instance.bulletsUsedAgainstEnemiesThisSession,
+                BulletsUsedAgainstBosses = Game1.Instance.bulletsUsedAgainstBossesThisSession,
+                LivesLost = Game1.Instance.livesLostThisSession,
+                Deaths = Game1.Instance.deathsThisSession,
+                EnemyHealthMultiplier = DifficultyManager.Instance.EnemyHealthMultiplier,
+                EnemySpeedMultiplier = DifficultyManager.Instance.EnemySpeedMultiplier,
+                EnemyDamageMultiplier = DifficultyManager.Instance.EnemyDamageMultiplier,
+                BossHealthMultiplier = DifficultyManager.Instance.BossHealthMultiplier,
+                BossAttackSpeedMultiplier = DifficultyManager.Instance.BossAttackSpeedMultiplier,
+                BossMovementSpeedMultiplier = DifficultyManager.Instance.BossMovementSpeedMultiplier,
+                BossDamageMultiplier = DifficultyManager.Instance.BossDamageMultiplier,
+                LogDate = DateTime.Now
+            };
+
+            DebugLogger.AppendLogEntry(logEntry);
         }
     }
 }

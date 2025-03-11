@@ -20,6 +20,29 @@ namespace Survivor_of_the_Bulge
             CollisionDamage = 30;
         }
 
+        // Override Update so that each frame the boss updates its stats immediately.
+        public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
+        {
+            // Apply boss-specific difficulty modifiers.
+            ApplyDifficultyModifiers();
+            // Then use the standard enemy update logic.
+            base.Update(gameTime, viewport, playerPosition, player);
+        }
+
+        // Override ApplyDifficultyModifiers for Boss using boss-specific multipliers.
+        public override void ApplyDifficultyModifiers()
+        {
+            // Update MovementSpeed and BulletDamage using boss-specific multipliers.
+            MovementSpeed = 150f * DifficultyManager.Instance.BossMovementSpeedMultiplier;
+            BulletDamage = (int)(baseDamage * DifficultyManager.Instance.BossDamageMultiplier);
+            // Calculate new maximum health.
+            int newMaxHealth = (int)(baseHealth * DifficultyManager.Instance.BossHealthMultiplier);
+            // Immediately update Health to the new maximum.
+            Health = newMaxHealth;
+            // Update FiringInterval based on boss attack speed multiplier.
+            FiringInterval = 1.5f / DifficultyManager.Instance.BossAttackSpeedMultiplier;
+        }
+
         // Override Bounds with center-based logic using scaling.
         public override Rectangle Bounds
         {

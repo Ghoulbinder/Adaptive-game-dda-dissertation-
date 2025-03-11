@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;  // For Debug.WriteLine
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -50,6 +51,10 @@ namespace Survivor_of_the_Bulge
         private DateTime sessionStartTime;
         // *** End Autosave/Scoreboard Fields ***
 
+        // Expose playerStats and sessionStartTime via public properties.
+        public PlayerStats PlayerStatsInstance => playerStats;
+        public DateTime SessionStartTime => sessionStartTime;
+
         // Track previous difficulty for on-screen notification.
         private DifficultyLevel previousDifficulty;
 
@@ -61,6 +66,41 @@ namespace Survivor_of_the_Bulge
 
         // To ensure GameOver() is triggered only once.
         private bool gameOverTriggered = false;
+
+        // For the debug overlay: FPS calculation and public test hooks.
+        private double totalTime = 0;
+        private int frameCount = 0;
+        private int fps = 0;
+        public int FPS => fps;
+
+        // Expose current game state for testing.
+        public GameState CurrentGameState => currentState;
+
+        // New helper property: expose the current map.
+        public Map CurrentMap => (currentState != GameState.MainMenu && maps.ContainsKey(currentState)) ? maps[currentState] : null;
+
+        // Helper method: returns enemy count in the current map (if applicable).
+        public int GetCurrentEnemyCount()
+        {
+            if (currentState != GameState.MainMenu && maps.ContainsKey(currentState))
+                return maps[currentState].Enemies.Count;
+            return 0;
+        }
+
+        // Helper method: returns count of bosses in the current map.
+        public int GetBossCount()
+        {
+            int count = 0;
+            if (currentState != GameState.MainMenu && maps.ContainsKey(currentState))
+            {
+                foreach (var enemy in maps[currentState].Enemies)
+                {
+                    if (enemy is Boss)
+                        count++;
+                }
+            }
+            return count;
+        }
 
         // Singleton reference.
         public static Game1 Instance { get; private set; }
@@ -99,6 +139,8 @@ namespace Survivor_of_the_Bulge
             livesLostThisSession = 0;
             deathsThisSession = 0;
             sessionStartTime = DateTime.Now;
+
+            Debug.WriteLine("Game initialized in state: " + currentState.ToString());
 
             base.Initialize();
         }
@@ -248,7 +290,25 @@ namespace Survivor_of_the_Bulge
 
         protected override void Update(GameTime gameTime)
         {
+            // Update FPS counter.
+            totalTime += gameTime.ElapsedGameTime.TotalSeconds;
+            frameCount++;
+            if (totalTime >= 1)
+            {
+                fps = frameCount;
+                frameCount = 0;
+                totalTime -= 1;
+            }
+
             var currentKeyboardState = Keyboard.GetState();
+
+            // Toggle pause on Tab key (edge detection).
+            if (currentKeyboardState.IsKeyDown(Keys.Tab) && previousKeyboardState.IsKeyUp(Keys.Tab))
+            {
+                isPaused = !isPaused;
+                IsMouseVisible = isPaused;
+                Debug.WriteLine("Pause toggled. isPaused = " + isPaused);
+            }
 
             // Handle difficulty key input.
             if (currentKeyboardState.IsKeyDown(Keys.D0))
@@ -284,18 +344,18 @@ namespace Survivor_of_the_Bulge
                 return; // Early exit to avoid processing map logic
             }
 
-            if (currentState == GameState.MainMenu && currentKeyboardState.IsKeyDown(Keys.Enter))
-            {
-                currentState = GameState.GreenForestCentre;
-            }
-
+            // If we are in Scoreboard state, update only the scoreboard.
             if (currentState == GameState.Scoreboard)
             {
-                // If we are in Scoreboard state, update only the scoreboard.
                 scoreboardState.Update(gameTime);
                 if (scoreboardState.Finished)
                     Environment.Exit(0);
                 return; // Skip rest of update
+            }
+
+            if (currentState == GameState.MainMenu && currentKeyboardState.IsKeyDown(Keys.Enter))
+            {
+                currentState = GameState.GreenForestCentre;
             }
 
             if (isPaused)
@@ -522,36 +582,31 @@ is entwined with supernatural forces that challenge every fiber of your being.
 Can you unravel the mystery of your transformation and restore the balance between worlds?
 
 Press Enter to step into the legend...";
-
                     Vector2 textSize = gameFont.MeasureString(introStory);
                     float margin = 50f;
                     float posX = GraphicsDevice.Viewport.Width - textSize.X - margin;
                     float posY = (GraphicsDevice.Viewport.Height - textSize.Y) / 2;
                     Vector2 position = new Vector2(posX, posY);
-
                     _spriteBatch.DrawString(gameFont, introStory, position, Color.Yellow);
                 }
                 else
                 {
                     var currentMap = maps[currentState];
                     _spriteBatch.Draw(currentMap.Background, Vector2.Zero, Color.White);
-
                     foreach (var snow in snowFlakes)
                         snow.Draw(_spriteBatch);
                     foreach (var leaf in fallingLeaves)
                         leaf.Draw(_spriteBatch);
-
                     player.Draw(_spriteBatch);
-
                     foreach (var enemy in currentMap.Enemies)
                         enemy.Draw(_spriteBatch);
-
                     if (!isPaused)
                         playerStats.Draw(_spriteBatch, new Vector2(10, 10));
                 }
 
                 if (isPaused)
                 {
+                    // Draw pause menu including debug overlay.
                     pauseMenu.Draw(_spriteBatch, playerStats);
                 }
 
@@ -590,6 +645,24 @@ Press Enter to step into the legend...";
                 currentLives,
                 deathsThisSession,
                 gameData);
+        }
+
+        // Testing hook: Reset game state for unit/integration testing.
+        public void ResetGameForTesting()
+        {
+            currentState = GameState.MainMenu;
+            gameOverTriggered = false;
+            // Reset session variables.
+            currentLevel = 1;
+            currentLives = 3;
+            currentScore = 0;
+            bulletsFiredThisSession = 0;
+            bulletsUsedAgainstEnemiesThisSession = 0;
+            bulletsUsedAgainstBossesThisSession = 0;
+            livesLostThisSession = 0;
+            deathsThisSession = 0;
+            sessionStartTime = DateTime.Now;
+            Debug.WriteLine("Game state reset for testing.");
         }
     }
 }

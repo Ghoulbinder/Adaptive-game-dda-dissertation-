@@ -15,7 +15,6 @@ namespace Survivor_of_the_Bulge
 
         public Vector2 Position;
         public float MovementSpeed { get; set; } = 100f;
-        // Current Health (remains after damage).
         public int Health { get; protected set; }
         public int BulletDamage { get; set; } = 5;
         public float FiringInterval { get; set; } = 2f;
@@ -107,7 +106,7 @@ namespace Survivor_of_the_Bulge
         /// Applies difficulty modifiers to MovementSpeed and BulletDamage.
         /// Also, if the current Health exceeds the new maximum (baseHealth × multiplier), reduce it.
         /// </summary>
-        public void ApplyDifficultyModifiers()
+        public virtual void ApplyDifficultyModifiers()
         {
             MovementSpeed = 100f * DifficultyManager.Instance.EnemySpeedMultiplier;
             BulletDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);

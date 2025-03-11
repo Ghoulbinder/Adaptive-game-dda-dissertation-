@@ -26,7 +26,7 @@ namespace Survivor_of_the_Bulge
     public class ScoreboardEntry
     {
         public string PlayerName { get; set; }
-        public int LevelReached { get; set; }  // Added LevelReached property
+        public int LevelReached { get; set; }
         public int BulletsFired { get; set; }
         public int BulletsUsedAgainstEnemies { get; set; }
         public int BulletsUsedAgainstBosses { get; set; }
@@ -83,6 +83,20 @@ namespace Survivor_of_the_Bulge
                 System.Diagnostics.Debug.WriteLine("Error loading game data: " + ex.Message);
             }
             return new GameData();
+        }
+
+        // Testing hooks.
+        public static string GetSaveFilePath()
+        {
+            return savePath;
+        }
+
+        public static void DeleteSavedGameData()
+        {
+            if (File.Exists(savePath))
+            {
+                File.Delete(savePath);
+            }
         }
     }
 }
