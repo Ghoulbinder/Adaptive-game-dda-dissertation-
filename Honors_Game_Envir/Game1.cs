@@ -629,11 +629,15 @@ Press Enter to step into the legend...";
         // Call this method when game over is triggered.
         public void GameOver()
         {
+            // Capture the current difficulty level before resetting.
+            DifficultyLevel endingDifficulty = DifficultyManager.Instance.CurrentDifficulty;
+
             // Reset dynamic difficulty to Normal.
             DifficultyManager.Instance.SetDifficulty(DifficultyLevel.Normal);
 
             currentState = GameState.Scoreboard;
             double timeSpent = (DateTime.Now - sessionStartTime).TotalSeconds;
+            // Pass the captured endingDifficulty into ScoreboardState.
             scoreboardState = new ScoreboardState(gameFont,
                 timeSpent,
                 bulletsFiredThisSession,
@@ -644,8 +648,10 @@ Press Enter to step into the legend...";
                 currentLevel,
                 currentLives,
                 deathsThisSession,
-                gameData);
+                gameData,
+                endingDifficulty);
         }
+
 
         // Testing hook: Reset game state for unit/integration testing.
         public void ResetGameForTesting()

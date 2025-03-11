@@ -28,11 +28,16 @@ namespace Survivor_of_the_Bulge
 
         private KeyboardState previousKBState;
 
+        // Store the ending difficulty captured at game over.
+        private DifficultyLevel endingDifficulty;
+        public DifficultyLevel EndingDifficulty => endingDifficulty;
+
         // Public property to expose the player's entered name.
-        public string PlayerName => currentInput;
+        public string PlayerName => currentInput.Trim();
 
         public ScoreboardState(SpriteFont font, double timeSpent, int bulletsFired, int bulletsUsedEnemies, int bulletsUsedBosses,
-                               int livesLost, int currentScore, int currentLevel, int currentLives, int deaths, GameData gameData)
+                               int livesLost, int currentScore, int currentLevel, int currentLives, int deaths, GameData gameData,
+                               DifficultyLevel endingDifficulty)
         {
             this.font = font;
             this.timeSpent = timeSpent;
@@ -45,6 +50,7 @@ namespace Survivor_of_the_Bulge
             this.currentLives = currentLives;
             this.deaths = deaths;
             this.gameData = gameData;
+            this.endingDifficulty = endingDifficulty;
 
             finalScore = (bulletsUsedEnemies * 10) +
                          (bulletsUsedBosses * 20) -
@@ -116,9 +122,12 @@ namespace Survivor_of_the_Bulge
 
         private void SaveScore()
         {
+            // Trim the player's name.
+            string playerName = currentInput.Trim();
+
             ScoreboardEntry entry = new ScoreboardEntry
             {
-                PlayerName = currentInput,
+                PlayerName = playerName,
                 LevelReached = currentLevel,
                 BulletsFired = bulletsFired,
                 BulletsUsedAgainstEnemies = bulletsUsedEnemies,
@@ -143,11 +152,11 @@ namespace Survivor_of_the_Bulge
             gameData.Scoreboard.Add(entry);
             SaveLoadManager.SaveGameData(gameData);
 
-            // Create and append a debug log entry using the entered player's name.
+            // Create and append a debug log entry using the captured ending difficulty.
             DebugLogEntry logEntry = new DebugLogEntry
             {
-                PlayerName = currentInput,
-                DifficultyLevel = DifficultyManager.Instance.CurrentDifficulty,
+                PlayerName = playerName,
+                DifficultyLevel = endingDifficulty,
                 EnemiesKilled = Game1.Instance.CurrentMap != null ? Game1.Instance.CurrentMap.KillCount : 0,
                 BossesKilled = Game1.Instance.GetBossCount(),
                 TimeTakenSeconds = (DateTime.Now - Game1.Instance.SessionStartTime).TotalSeconds,
