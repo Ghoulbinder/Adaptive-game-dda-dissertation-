@@ -3,7 +3,7 @@ using DDA_Tool; // Assuming this is the namespace for your dynamic difficulty co
 
 namespace Survivor_of_the_Bulge
 {
-    public enum DifficultyLevel { Default, Easy, Normal, Hard }
+    public enum DifficultyLevel { Default, Easy, Medium, Hard }
 
     public class DifficultyManager
     {
@@ -42,7 +42,7 @@ namespace Survivor_of_the_Bulge
         /// <summary>
         /// Sets the difficulty level.
         /// For Default, preset values are used.
-        /// For Easy, Normal, and Hard, values are retrieved from the DLL's DynamicDifficultyController.
+        /// For Easy, Medium, and Hard, values are retrieved from the DLL's DynamicDifficultyController.
         /// </summary>
         public void SetDifficulty(DifficultyLevel level)
         {
@@ -59,15 +59,14 @@ namespace Survivor_of_the_Bulge
                     BossAttackSpeedMultiplier = 0.8f;
                     BossMovementSpeedMultiplier = 0.8f;
                     BossDamageMultiplier = 0.8f;
-                    // For Default, we can set a default boss spawn threshold.
                     BossSpawnThreshold = 10;
                     break;
                 case DifficultyLevel.Easy:
                     dynamicController.SetDifficulty(DDA_Tool.DifficultyLevel.Easy);
                     BaseEnemyCount = dynamicController.BossSpawnThreshold; // Expected 8 for Easy.
-                    EnemyHealthMultiplier = dynamicController.EnemyHealthMultiplier;         // e.g., 1.0f
-                    EnemySpeedMultiplier = dynamicController.EnemyMovementSpeedMultiplier;     // e.g., 1.0f
-                    EnemyDamageMultiplier = dynamicController.EnemyDamageMultiplier;           // e.g., 1.0f
+                    EnemyHealthMultiplier = dynamicController.EnemyHealthMultiplier;
+                    EnemySpeedMultiplier = dynamicController.EnemyMovementSpeedMultiplier;
+                    EnemyDamageMultiplier = dynamicController.EnemyDamageMultiplier;
                     SpawnRateMultiplier = 1f;
                     BossHealthMultiplier = dynamicController.BossHealthMultiplier;
                     BossAttackSpeedMultiplier = dynamicController.BossAttackSpeedMultiplier;
@@ -75,9 +74,9 @@ namespace Survivor_of_the_Bulge
                     BossDamageMultiplier = dynamicController.BossDamageMultiplier;
                     BossSpawnThreshold = dynamicController.BossSpawnThreshold; // Expected 8.
                     break;
-                case DifficultyLevel.Normal:
-                    dynamicController.SetDifficulty(DDA_Tool.DifficultyLevel.Normal);
-                    BaseEnemyCount = dynamicController.BossSpawnThreshold; // Expected 15 for Normal.
+                case DifficultyLevel.Medium:
+                    dynamicController.SetDifficulty(DDA_Tool.DifficultyLevel.Normal); // DLL's Normal now maps to Medium.
+                    BaseEnemyCount = dynamicController.BossSpawnThreshold; // Expected 15 for Medium.
                     EnemyHealthMultiplier = dynamicController.EnemyHealthMultiplier;
                     EnemySpeedMultiplier = dynamicController.EnemyMovementSpeedMultiplier;
                     EnemyDamageMultiplier = dynamicController.EnemyDamageMultiplier;
@@ -106,7 +105,7 @@ namespace Survivor_of_the_Bulge
 
         /// <summary>
         /// Processes key input to set the difficulty level.
-        /// '0' for Default, '1' for Easy, '2' for Normal, '3' for Hard.
+        /// '0' for Default, '1' for Easy, '2' for Medium, '3' for Hard.
         /// </summary>
         public void HandleKeyInput(char keyChar)
         {
@@ -115,7 +114,7 @@ namespace Survivor_of_the_Bulge
             else if (keyChar == '1')
                 SetDifficulty(DifficultyLevel.Easy);
             else if (keyChar == '2')
-                SetDifficulty(DifficultyLevel.Normal);
+                SetDifficulty(DifficultyLevel.Medium);
             else if (keyChar == '3')
                 SetDifficulty(DifficultyLevel.Hard);
         }

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Linq;
 
 namespace Survivor_of_the_Bulge
 {
@@ -32,7 +33,7 @@ namespace Survivor_of_the_Bulge
         private DifficultyLevel endingDifficulty;
         public DifficultyLevel EndingDifficulty => endingDifficulty;
 
-        // Public property to expose the player's entered name.
+        // Public property to expose the player's entered name, trimmed.
         public string PlayerName => currentInput.Trim();
 
         public ScoreboardState(SpriteFont font, double timeSpent, int bulletsFired, int bulletsUsedEnemies, int bulletsUsedBosses,
@@ -112,7 +113,8 @@ namespace Survivor_of_the_Bulge
             graphicsDevice.Clear(Color.Black);
             spriteBatch.Begin();
             string displayText = $"{promptText}\n{currentInput}\n\nFinal Score: {finalScore}\nTime Spent: {timeSpent:F2} sec\n\nPrevious Scores:\n";
-            foreach (ScoreboardEntry entry in gameData.Scoreboard)
+            // Iterate over the scoreboard entries in reverse order so the most recent appears first.
+            foreach (var entry in gameData.Scoreboard.AsEnumerable().Reverse())
             {
                 displayText += $"{entry.PlayerName}: {entry.FinalScore} (Level {entry.LevelReached}, Lives Lost: {entry.LivesLost}, Time: {entry.TimeSpentSeconds:F0} sec)\n";
             }

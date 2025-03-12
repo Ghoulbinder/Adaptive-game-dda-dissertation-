@@ -118,12 +118,20 @@ namespace Survivor_of_the_Bulge
 
         public void TakeDamage(int amount)
         {
+            // Record current health before taking damage.
+            int oldHealth = stats.Health;
             stats.Health -= amount;
+            int damageTaken = oldHealth - stats.Health;
+            // Update the total damage taken in player stats.
+            stats.TotalDamageTaken += damageTaken;
             Debug.WriteLine($"Player took {amount} damage. Health now: {stats.Health}");
             if (stats.Health <= 0)
             {
                 if (stats.Lives > 1)
                 {
+                    // Increment lives lost counter.
+                    Game1.Instance.livesLostThisSession++;
+
                     stats.Lives--;
                     stats.Health = _maxHealth;
                     Debug.WriteLine($"Player lost a life. Lives remaining: {stats.Lives}. Health reset to {_maxHealth}.");
@@ -136,8 +144,6 @@ namespace Survivor_of_the_Bulge
                 }
             }
         }
-
-
 
         // Method to gain experience.
         public void GainExperience(int amount)
@@ -275,6 +281,9 @@ namespace Survivor_of_the_Bulge
 
         private void Shoot()
         {
+            // Increment bullet fired counter.
+            Game1.Instance.bulletsFiredThisSession++;
+
             Texture2D bulletToUse = null;
             SpriteEffects effect = SpriteEffects.None;
             Vector2 bulletDirection = Vector2.Zero;

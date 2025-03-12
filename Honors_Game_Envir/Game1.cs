@@ -51,6 +51,10 @@ namespace Survivor_of_the_Bulge
         private DateTime sessionStartTime;
         // *** End Autosave/Scoreboard Fields ***
 
+        // New counters for enemy and boss kills.
+        public int totalEnemiesKilled = 0;
+        public int totalBossesKilled = 0;
+
         // Expose playerStats and sessionStartTime via public properties.
         public PlayerStats PlayerStatsInstance => playerStats;
         public DateTime SessionStartTime => sessionStartTime;
@@ -90,16 +94,7 @@ namespace Survivor_of_the_Bulge
         // Helper method: returns count of bosses in the current map.
         public int GetBossCount()
         {
-            int count = 0;
-            if (currentState != GameState.MainMenu && maps.ContainsKey(currentState))
-            {
-                foreach (var enemy in maps[currentState].Enemies)
-                {
-                    if (enemy is Boss)
-                        count++;
-                }
-            }
-            return count;
+            return totalBossesKilled;
         }
 
         // Singleton reference.
@@ -139,6 +134,10 @@ namespace Survivor_of_the_Bulge
             livesLostThisSession = 0;
             deathsThisSession = 0;
             sessionStartTime = DateTime.Now;
+
+            // Initialize kill counters.
+            totalEnemiesKilled = 0;
+            totalBossesKilled = 0;
 
             Debug.WriteLine("Game initialized in state: " + currentState.ToString());
 
@@ -369,11 +368,15 @@ namespace Survivor_of_the_Bulge
                 player.Update(gameTime, _graphics.GraphicsDevice.Viewport, currentMap.Enemies);
                 playerStats.UpdateHealth(player.Health);
 
-                // Remove dead enemies and update kill count.
+                // Remove dead enemies and update kill counters.
                 for (int i = currentMap.Enemies.Count - 1; i >= 0; i--)
                 {
                     if (currentMap.Enemies[i].IsDead)
                     {
+                        if (currentMap.Enemies[i] is Boss)
+                            totalBossesKilled++;
+                        else
+                            totalEnemiesKilled++;
                         currentMap.IncrementKillCount();
                         currentMap.Enemies.RemoveAt(i);
                     }
@@ -632,8 +635,8 @@ Press Enter to step into the legend...";
             // Capture the current difficulty level before resetting.
             DifficultyLevel endingDifficulty = DifficultyManager.Instance.CurrentDifficulty;
 
-            // Reset dynamic difficulty to Normal.
-            DifficultyManager.Instance.SetDifficulty(DifficultyLevel.Normal);
+            // Reset dynamic difficulty to Normal (now renamed to Medium).
+            DifficultyManager.Instance.SetDifficulty(DifficultyLevel.Medium);
 
             currentState = GameState.Scoreboard;
             double timeSpent = (DateTime.Now - sessionStartTime).TotalSeconds;
@@ -652,7 +655,6 @@ Press Enter to step into the legend...";
                 endingDifficulty);
         }
 
-
         // Testing hook: Reset game state for unit/integration testing.
         public void ResetGameForTesting()
         {
@@ -668,6 +670,9 @@ Press Enter to step into the legend...";
             livesLostThisSession = 0;
             deathsThisSession = 0;
             sessionStartTime = DateTime.Now;
+            // Also reset kill counters.
+            totalEnemiesKilled = 0;
+            totalBossesKilled = 0;
             Debug.WriteLine("Game state reset for testing.");
         }
     }

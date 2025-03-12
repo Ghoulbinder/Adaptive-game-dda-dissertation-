@@ -163,10 +163,13 @@ namespace Survivor_of_the_Bulge
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
+                // If the bullet collides with the player's bounds.
                 if (bullet.IsActive && player.Bounds.Intersects(bullet.Bounds))
                 {
                     player.TakeDamage(bullet.Damage);
                     bullet.Deactivate();
+                    // Increment the counter for bullets used against enemies.
+                    Game1.Instance.bulletsUsedAgainstEnemiesThisSession++;
                 }
             }
             bullets.RemoveAll(b => !b.IsActive);
