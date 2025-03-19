@@ -59,7 +59,7 @@ namespace Survivor_of_the_Bulge
                     BossAttackSpeedMultiplier = 0.8f;
                     BossMovementSpeedMultiplier = 0.8f;
                     BossDamageMultiplier = 0.8f;
-                    BossSpawnThreshold = 10;
+                    BossSpawnThreshold = 4;//was 10 by accident
                     break;
                 case DifficultyLevel.Easy:
                     dynamicController.SetDifficulty(DDA_Tool.DifficultyLevel.Easy);
