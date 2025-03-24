@@ -1,0 +1,238 @@
+3fb100b,Romeo Mcdonald,2025-03-19,update,
+f8f71cb,Romeo Mcdonald,2025-03-12,update,
+91a4dbf,Romeo Mcdonald,2025-03-11,update,
+7780fe2,Romeo Mcdonald,2025-03-11,update,Here’s a summary of the key updates and testing features you implemented today:
+
+Dynamic Difficulty Adjustments:
+You integrated a dynamic difficulty system using a custom DifficultyManager that reads settings from your DLL (DynamicDifficultyController). This allows enemy and boss stats (such as health, speed, damage, and spawn thresholds) to change according to the selected difficulty (Default, Easy, Normal, Hard). You also ensured that when the difficulty changes during gameplay, both enemy and boss attributes update immediately.
+
+Boss & Enemy Debug Updates:
+The Boss class was updated so that it applies its difficulty modifiers on every update—this includes updating health, movement speed, damage, and firing interval based on boss-specific multipliers. The enemy class similarly updates its stats.
+
+Pause Menu & Debug Overlay:
+The pause menu now shows a debug overlay when you press Tab. This overlay displays real-time game data including current game state, difficulty, enemy count, boss count, FPS, and even detailed sample stats for one enemy and one boss (health, damage, movement speed, and firing interval).
+
+Debug Logger & XML Logging:
+You created a DebugLogger that collects key metrics at game over (e.g., difficulty level, enemies killed, bosses killed, time played, damage taken, bullets fired/used, and even the player’s name entered in the scoreboard). The logger appends each new log entry to an XML file stored in your application data folder so that you have a persistent record across multiple play sessions.
+
+Testing Hooks and Data Collection:
+You added public properties (like PlayerStatsInstance and SessionStartTime) in Game1 so that other components (such as ScoreboardState) can access internal game metrics for automated unit and integration tests. You also set up methods like ResetGameForTesting() so that you can easily reset game state for testing purposes.
+
+Scoreboard Updates:
+The ScoreboardState class was updated to process user input for the player’s name, and it now exposes the entered name via a public property. This name is then used in the debug log, ensuring that the log entries correctly reference the player’s name instead of "Unknown."
+
+f2be23e,Romeo Mcdonald,2025-03-10,upadte,Here's a summary of the changes you made today for your game:
+
+1. **Dynamic Difficulty Integration**
+   - **DifficultyManager.cs:**
+     You updated the manager to integrate with your DLL's dynamic difficulty controller. Now, when you change the difficulty (using keys 0–3), the manager retrieves enemy counts and multipliers (for enemy health, speed, damage, and boss parameters) directly from the DLL for Easy, Normal, and Hard settings. The Default setting uses preset lower values.
+
+2. **Enemy & Map Behavior Adjustments**
+   - **Map.cs:**
+     Modified the spawn logic so that new enemies are spawned based on the current `BaseEnemyCount` from the DifficultyManager. Also ensured that once a boss spawns, enemy spawning stops for that map.
+   - **Enemy.cs and Boss.cs:**
+     Updated these classes so that enemies store their base health and damage on spawn. Their update methods now adjust MovementSpeed and BulletDamage using the current multipliers, and if an enemy’s current Health exceeds its new maximum (due to a difficulty change), it’s reduced accordingly. Boss.cs inherits these changes.
+
+3. **Game State Management**
+   - **Game1.cs:**
+     Revised the main game loop to:
+     - Check for difficulty key input and update DifficultyManager accordingly.
+     - Transition to a Scoreboard state when either the player presses Escape or when the player’s lives drop to zero.
+     - Prevent the game from attempting to process map logic when in the Scoreboard state, thus avoiding errors.
+   - **ScoreboardState.cs:**
+     You converted the previous ScoreboardScreen into a ScoreboardState game state, so that when the game ends the scoreboard is displayed as a separate state where the player can enter their name and see their final score along with previous scores.
+
+4. **Player Damage Handling**
+   - **Player.cs:**
+     Modified the `TakeDamage` method so that if the player is on their last life and health drops below zero, the Lives property is set to 0. This ensures the game over condition is correctly triggered.
+
+5. **Final Testing and Behavior**
+   - The game now uses dynamic difficulty settings from the DLL, spawns the correct number of enemies based on the difficulty, and updates enemy and boss stats immediately upon a difficulty change.
+   - When the player runs out of lives or presses Escape, the game transitions to the Scoreboard state without freezing.
+
+34e2c55,Romeo Mcdonald,2025-03-10,update,
+1e02397,Romeo Mcdonald,2025-02-25,update,Dynamic Difficulty Integration:
+The game now uses a Dynamic Difficulty Controller (from the DDA DLL) to manage various parameters in real time. Instead of hardcoding values like boss spawn thresholds, enemy health, damage, and movement speed, these are now scaled according to the current difficulty setting.
+
+Difficulty Input & Notification:
+The game listens for key presses (D1, D2, and D3) to change the difficulty on the fly. When the difficulty changes, an on-screen notification appears at the top-right (or later, in a specified location) for 5 seconds, informing the player of the new difficulty level.
+
+Boss & Enemy Scaling:
+All boss and enemy parameters—such as health and damage—are dynamically computed by multiplying base values by the corresponding multipliers provided by the difficulty controller. This ensures that when you switch difficulty (e.g., to Easy), bosses become less punishing (and vice versa).
+
+Scoreboard & Game Over Behavior:
+When the game ends (either by player death or by pressing Escape), the game resets the difficulty to base (Normal) and transitions to a Scoreboard state. In this state, the game displays session statistics and previous scores, allowing the player to enter their name before the game finally exits.
+
+Intro Story & Main Menu:
+The main menu now displays an introductory story overlay with a fantastical narrative. The text is rendered in the top right (or centered vertically on the right side) so players are immersed in the game world before starting.
+
+aab7a0f,Romeo Mcdonald,2025-02-25,update,
+de768df,Romeo Mcdonald,2025-02-25,update,implemented the dll into the game
+
+ac55e45,Romeo Mcdonald,2025-02-25,update,got the scoreboard working and saving data to the xml form
+
+d214216,Romeo Mcdonald,2025-02-25,updated,tried to fix butterfly boss collision box
+
+234bf9b,Romeo Mcdonald,2025-02-24,update,got the exp points working
+
+6efa56f,Romeo Mcdonald,2025-02-24,update,
+1757b6b,Romeo Mcdonald,2025-02-24,update,Dynamic Difficulty & Map Management:
+
+We integrated a dynamic difficulty system (DifficultyManager) that adjusts enemy count, health, speed, and damage.
+The Map class was updated to track enemy kill counts and to handle respawns. Bosses now only spawn after a configurable number of enemy kills (initially set to 2).
+Player Improvements:
+
+We refined the Player class by separating walking and attack animations (using different sprite sheets) and synchronized bullet firing with the attack animation.
+We switched to center-based collision detection for both the player and bosses, ensuring that positions and collisions are more accurate.
+Continuous firing was implemented so that a single press fires one bullet and holding the button fires repeatedly.
+Enemy & Boss FSM Updates:
+
+The basic Enemy AI was adjusted to follow a finite state machine (FSM) similar to the GreenBoss.
+For each boss type (GreenBoss, ButterflyBoss, DragonBoss, OgreBoss, and SpiderBoss), we developed specific FSMs handling states like Idle, Patrol/Chase, Attack, and, in some cases, Enraged.
+We adjusted boss behaviors:
+GreenBoss: Now correctly transitions between patrolling, chasing, and attacking while using the appropriate directional animations.
+ButterflyBoss: Uses separate attack and walking textures (no idle) and now fires the correct projectile animations.
+DragonBoss: Has distinct projectile (ranged) and melee modes that prevent it from overlapping the player before melee. It fires projectiles when the player is far and switches to melee when the player gets closer.
+OgreBoss: Is designed for pure melee—when the player fires, it becomes aggro, rushes to the player’s last known position, attacks once (then resets to idle), and rotates correctly according to the previous attack direction.
+SpiderBoss: Now rotates and fires using its specialized animated bullet textures for ranged attacks when the player is far away.
+Animation & Collision Adjustments:
+
+We refined the animation systems for both the player and all enemies/bosses so that each state uses its correct sprite sheet (with proper frame counts, rows, and columns).
+Adjustments were made so that the animations play smoothly without “jumping” frames, and bosses now use center-based collision boxes for more accurate interactions.
+User Interface & Transition Enhancements:
+
+We added UI elements like a pause menu, main menu, and player stat display.
+Map transitions now correctly center the player in the new map.
+Boss spawn conditions were tied to enemy kill counts on each map.
+
+c655520,Romeo Mcdonald,2025-02-19,update,Player Mechanics & Animation:
+
+We refined the player's firing mechanics so that a single press fires a bullet and holding the button fires continuously.
+We adjusted the timing so the bullet is created earlier in the firing animation without cutting the animation short.
+We also updated the player's animation so that the idle state is now the same as the movement animation (i.e. if the player stops moving, it holds the last frame of movement).
+Bullet & Collision Updates:
+
+We ensured that the collision boxes for both the player and bosses use their centers for more accurate hit detection.
+We modified bullet behavior so that they only disappear when they leave the screen or actually hit the player (preventing premature disappearance).
+Boss Behaviors & FSM Enhancements:
+
+For various bosses (Butterfly, Dragon, Ogre, Spider), we updated their finite state machines so they have proper attack, chasing, and reset behaviors.
+We implemented separate directional textures for bosses so they don’t just rotate a single image but use the correct animation for each cardinal direction.
+Specifically, for the OgreBoss, we refined the attack pattern to lock onto the player’s last position, then perform a melee attack and reset to idle before chasing again.
+We updated the DragonBoss to use its own bullet textures (from the Dragon_Fireball folder) and modified its behavior to attack from range when appropriate, similar to the SpiderBoss.
+For the ButterflyBoss, we switched its projectile textures to the butterfly-specific ones and adjusted its behavior so that it fires correctly based on the player’s position.
+Map & Spawning Logic:
+
+We ensured that bosses only spawn when conditions are met (for testing we temporarily set thresholds lower) and that each map’s enemy spawn parameters are set correctly.
+We made sure the player’s position is centered when transitioning between maps and that the boss and enemy spawns occur on the correct maps.
+Additional Improvements:
+
+We integrated a pause menu that allows the player to pause the game and see their stats.
+We made various bug fixes to ensure that animations (for both the player and bosses) play smoothly and consistently across maps.
+
+f8fa519,Romeo Mcdonald,2025-02-18,update,Dynamic Difficulty & Enemy Spawning:
+
+Integrated a DifficultyManager to adjust enemy spawn parameters (health, speed, count, etc.) dynamically.
+Updated the Map class to support enemy respawning, kill tracking, and boss spawning triggers.
+Player Improvements:
+
+Fixed the player’s firing animation so that bullets are created at the right moment (allowing for both single-shot and continuous firing).
+Adjusted player movement and bullet positioning by using the center of the sprite for accurate collisions.
+Boss Enhancements:
+
+Updated various boss classes (GreenBoss, ButterflyBoss, DragonBoss, OgreBoss, SpiderBoss) so that each spawns on a designated map.
+For the ButterflyBoss and SpiderBoss, refined their finite state machines so that they properly switch between Walking and Attack states (and removed the idle state where requested).
+Modified bullet behaviors for bosses so they fire in the correct direction with appropriate sprite effects.
+Ensured boss collision boxes are centered, independent of sprite scale, so bullets don’t disappear prematurely.
+Animation & Visual Tweaks:
+
+Adjusted animation frame timing for both the player and bosses to better sync actions (such as firing) with visual feedback.
+Improved sprite alignment so that animations (for both the player and bosses) behave consistently across different maps.
+User Interface & Map Transitions:
+
+Updated UI elements (MenuState, PauseMenu) and integrated weather effects (falling leaves, snowflakes) to enhance the game environment.
+Implemented map transitions that center the player on the new map, ensuring a smooth experience.
+
+dbd06e5,Romeo Mcdonald,2025-02-17,update,
+68e33ad,Romeo Mcdonald,2025-02-17,update,Extended Boss Functionality:
+We added three new boss classes (DragonBoss, OgreBoss, and SpiderBoss) in addition to the existing ButterflyBoss and GreenBoss. Each boss uses its own set of textures (with specific dimensions and frame layouts) for idle, attack, and walking animations.
+
+Animation & Collision Improvements:
+We refined the animation systems for bosses and the player, ensuring that the correct textures and frame timings are used. We also modified collision detection so that bosses use a smaller, centered collision box—this prevents bullets from disappearing prematurely.
+
+Firing Behavior:
+We updated the shooting logic for both the player and bosses. Bosses now fire toward the player's last known position, and the player fires bullets at a specific point in the attack animation cycle.
+
+Map & Boss Spawning:
+In the Game1 class, we set up the logic to spawn each boss on a designated map. For testing, the bosses spawn automatically on their maps, but this can later be tied to in-game conditions like kill counts.
+
+Code Clean-Up & Constructor Fixes:
+We resolved several constructor and variable conflicts (e.g., ensuring the Player constructor accepts the correct number of arguments) and cleaned up unused variables.
+
+fa39262,Romeo Mcdonald,2025-02-16,update,Here's a quick summary of what you accomplished today:
+
+- **Game Environment Setup:**
+  You worked on a C# game built with MonoGame, featuring multiple maps (e.g., GreenForestCentre, ForestTop) and core classes for player, enemy, bullets, transitions, and weather effects.
+
+- **Player & Enemy Enhancements:**
+  - Modified player and enemy animations to fix issues like partial drawing, incorrect spritesheet frame selections, and proper bullet spawn positions.
+  - Adjusted player stats for testing (making player bullets one-hit kills) and introduced modular parameters so that attributes (movement speed, firing rate, damage, etc.) can later be adjusted dynamically.
+
+- **Boss Implementation:**
+  - Added boss classes (a generic Boss, a specialized GreenBoss, and a ButterflyBoss) that inherit from the enemy class.
+  - Implemented finite state machine (FSM) behavior for bosses (e.g., Idle, Patrol, Chase, Attack, Enraged) so that bosses react to the player's proximity.
+  - Configured different spritesheet layouts for the ButterflyBoss (idle using a larger 1536×1024 sheet and other states using a 1024×1280 sheet).
+
+- **Spawn Logic & Dynamic Difficulty Preparation:**
+  - Implemented a per-map enemy kill counter and respawn logic (with a delay) to maintain a set number of enemies on each map.
+  - Set up automatic boss spawning on specific maps (for example, the ButterflyBoss on the ForestTop map and the GreenBoss on the GreenForestCentre map) when certain conditions are met.
+  - Laid groundwork for a future Dynamic Difficulty Adjustment (DDA) tool by making many stats modular and easily updatable.
+
+- **User Interface & Pause Menu:**
+  - Added a pause system with a dedicated pause menu that displays player stats and a “Press Tab to Resume” message.
+
+Overall, you’ve refined the gameplay mechanics, improved the animations and enemy/boss behavior, and set up a structure for dynamic difficulty and UI interactions for future enhancements.
+
+9fba3d7,Romeo Mcdonald,2025-02-16,update,added bosses and fixed animations
+
+f66daa2,Romeo Mcdonald,2025-02-13,update,swapped soldier to archer
+
+bdc2b51,Romeo Mcdonald,2025-02-13,sorted classes out,
+b63c003,Romeo Mcdonald,2025-02-13,added characters,
+168fe9d,Romeo Mcdonald,2025-02-11,update,
+affb636,Romeo Mcdonald,2025-02-11,update,added
+enemy and player
+movement speed
+bullet speed/interval
+and more stats.
+
+745f61d,Romeo Mcdonald,2025-02-06,update,got enemies spawinng
+#started the DDA tool implications into the game environment
+
+d340f99,Romeo Mcdonald,2025-02-06,update,
+bd17ebf,Romeo Mcdonald,2025-02-06,update,got enemies spawning with a function that lets me make it dynamic
+
+472c589,Romeo Mcdonald,2025-02-06,update,
+9d5ae2e,Romeo Mcdonald,2025-02-05,update,got the finite state machines working
+
+c2c8f9a,Romeo Mcdonald,2025-02-05,update,got the player stats up
+got the player firing bullets up, down, left and right
+
+30082ce,Romeo Mcdonald,2025-02-05,update,
+46695f4,Romeo Mcdonald,2025-02-04,update,resized the maps
+got enemy walking correctly
+redid enemy spritesheet as too many white spots on the edges
+
+3b50592,Romeo Mcdonald,2025-02-04,update,got enemies spawned are walking
+
+476efce,Romeo Mcdonald,2025-02-04,updated,
+c29e51b,Romeo Mcdonald,2025-02-03,update,grot the grid to be a bool for visibility
+
+fce45cc,Romeo Mcdonald,2025-02-03,update,got the transitions working perfectly
+
+e0bc1aa,Romeo Mcdonald,2025-01-29,update,got the transition kind of working
+
+1f16485,Romeo Mcdonald,2025-01-29,update,
+60cd3ae,Romeo Mcdonald,2025-01-29,update,
+c721943,Romeo Mcdonald,2025-01-28,update,
+4a23799,Romeo Mcdonald,2025-01-28,Initial commit,
