@@ -16,9 +16,9 @@ namespace Survivor_of_the_Bulge
         private Vector2 lastTargetPosition;        // Updated each frame with the current player's position.
 
         // Behavior thresholds.
-        private readonly float shootingRange = 200f;  // Distance within which the boss attacks.
-        private readonly float chaseThreshold = 400f;   // Distance beyond which the boss patrols.
-        private readonly float aggroChaseMultiplier = 1.5f; // Increased chase speed when aggro.
+        private readonly float shootingRange = 200f;      // Distance within which the boss attacks.
+        private readonly float chaseThreshold = 400f;     // Distance within which the boss chases.
+        private readonly float aggroChaseMultiplier = 1.5f; // Speed multiplier when in aggro mode.
 
         public GreenBoss(
             Texture2D back,
@@ -32,6 +32,7 @@ namespace Survivor_of_the_Bulge
             int bulletDamage)
             : base(back, front, left, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
+            // PSEUDOCODE: Initialize base movement, firing, and damage parameters
             MovementSpeed = 140f;
             FiringInterval = 1.2f;
             BulletRange = 550f;
@@ -39,20 +40,23 @@ namespace Survivor_of_the_Bulge
             CurrentState = GreenBossState.Idle;
             stateTimer = 0f;
 
-            // **** Experience gain modification: set boss exp reward ****
+            // PSEUDOCODE: Set experience reward on defeat
             this.ExperienceReward = 50;
-            // **** End modification ****
         }
 
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
+            // PSEUDOCODE: Compute time delta and track last player position
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             stateTimer += delta;
             lastTargetPosition = playerPosition;
+
+            // PSEUDOCODE: Calculate distance to player
             float distance = Vector2.Distance(Position, playerPosition);
 
             if (isAggro)
             {
+                // PSEUDOCODE: If aggro, chase the locked target until within shooting range
                 if (Vector2.Distance(Position, attackTarget) > shootingRange)
                 {
                     Vector2 diff = attackTarget - Position;
@@ -68,6 +72,7 @@ namespace Survivor_of_the_Bulge
                 }
                 else
                 {
+                    // PSEUDOCODE: When within range, attack and then exit aggro mode
                     CurrentState = GreenBossState.Attack;
                     timeSinceLastShot += delta;
                     if (timeSinceLastShot >= FiringInterval)
@@ -82,6 +87,7 @@ namespace Survivor_of_the_Bulge
             }
             else
             {
+                // PSEUDOCODE: Standard behavior: attack, chase or patrol based on distance
                 if (distance <= shootingRange)
                 {
                     CurrentState = GreenBossState.Attack;
@@ -112,6 +118,7 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
+            // PSEUDOCODE: Advance animation frame when timer exceeds frameTime
             timer += delta;
             if (timer >= frameTime)
             {
@@ -120,6 +127,7 @@ namespace Survivor_of_the_Bulge
             }
             UpdateFrameDimensions();
 
+            // PSEUDOCODE: Update bullets and handle collisions with player
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -134,10 +142,10 @@ namespace Survivor_of_the_Bulge
 
         public override void TakeDamage(int amount, Player player)
         {
+            // PSEUDOCODE: Apply damage and trigger aggro mode when hit
             base.TakeDamage(amount, player);
             if (amount > 0)
             {
-                // When hit, lock the current player position and enter aggro mode.
                 isAggro = true;
                 attackTarget = lastTargetPosition;
             }
@@ -146,6 +154,7 @@ namespace Survivor_of_the_Bulge
         // Modified Shoot method: choose bullet texture based on current direction.
         protected override void Shoot()
         {
+            // PSEUDOCODE: Determine shooting direction and texture
             Vector2 direction = Vector2.Zero;
             Texture2D bulletTexture = null;
             switch (currentDirection)
@@ -167,8 +176,18 @@ namespace Survivor_of_the_Bulge
                     bulletTexture = bulletHorizontalTexture;
                     break;
             }
+
+            // PSEUDOCODE: Spawn and add new bullet
             Vector2 bulletPos = Position + direction * 20f;
-            Bullet bullet = new Bullet(bulletTexture, bulletPos, direction, 500f, BulletDamage, SpriteEffects.None, BulletRange);
+            Bullet bullet = new Bullet(
+                bulletTexture,
+                bulletPos,
+                direction,
+                500f,
+                BulletDamage,
+                SpriteEffects.None,
+                BulletRange
+            );
             bullets.Add(bullet);
         }
     }

@@ -59,6 +59,7 @@ namespace Survivor_of_the_Bulge
             int health, int bulletDamage)
             : base(idleDown, idleDown, idleDown, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
+            // PSEUDOCODE: Store references to all directional textures for idle, attack, walking
             idleUpTexture = idleUp;
             idleDownTexture = idleDown;
             idleLeftTexture = idleLeft;
@@ -74,6 +75,7 @@ namespace Survivor_of_the_Bulge
             walkingLeftTexture = walkingLeft;
             walkingRightTexture = walkingRight;
 
+            // PSEUDOCODE: Initialize movement, damage, and initial state
             MovementSpeed = 130f;
             CollisionDamage = 35;
             CurrentState = OgreBossState.Idle;
@@ -87,9 +89,11 @@ namespace Survivor_of_the_Bulge
 
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
+            // PSEUDOCODE: Calculate elapsed time for this frame
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             stateTimer += delta;
 
+            // PSEUDOCODE: Lock player's position and compute attack angle if idle
             if (CurrentState == OgreBossState.Idle && !idleAngleLocked)
             {
                 lastTargetPosition = playerPosition;
@@ -97,13 +101,15 @@ namespace Survivor_of_the_Bulge
                     fixedAngle = (float)Math.Atan2(playerPosition.Y - Position.Y, playerPosition.X - Position.X);
             }
 
-            // Normalize fixedAngle to 0-360.
+            // PSEUDOCODE: Normalize angle into degrees for texture selection
             float angleDeg = MathHelper.ToDegrees(fixedAngle);
             if (angleDeg < 0)
                 angleDeg += 360;
 
+            // PSEUDOCODE: Determine distance to player
             float distance = Vector2.Distance(Position, playerPosition);
 
+            // PSEUDOCODE: State machine handling based on aggro and distance
             if (!isAggro)
             {
                 CurrentState = OgreBossState.Idle;
@@ -112,6 +118,7 @@ namespace Survivor_of_the_Bulge
             {
                 if (CurrentState == OgreBossState.Idle)
                 {
+                    // PSEUDOCODE: Enter aggro mode, lock attack target
                     attackTarget = playerPosition;
                     fixedAngle = (float)Math.Atan2(playerPosition.Y - Position.Y, playerPosition.X - Position.X);
                     idleAngleLocked = true;
@@ -119,6 +126,7 @@ namespace Survivor_of_the_Bulge
                 }
                 if (CurrentState == OgreBossState.Aggro)
                 {
+                    // PSEUDOCODE: Chase towards attack target
                     Vector2 diff = attackTarget - Position;
                     if (diff != Vector2.Zero)
                     {
@@ -127,6 +135,7 @@ namespace Survivor_of_the_Bulge
                     }
                     if (Vector2.Distance(Position, attackTarget) < meleeThreshold)
                     {
+                        // PSEUDOCODE: Switch to attack when in melee range
                         CurrentState = OgreBossState.Attack;
                         animTimer = 0f;
                         frameIndex = 0;
@@ -135,10 +144,10 @@ namespace Survivor_of_the_Bulge
                 }
                 else if (CurrentState == OgreBossState.Attack)
                 {
+                    // PSEUDOCODE: Perform melee attack then transition to reset
                     timeSinceLastShot += delta;
                     if (timeSinceLastShot >= FiringInterval)
                     {
-                        // Check if player is within melee range.
                         if (Vector2.Distance(Position, player.Position) <= meleeThreshold)
                         {
                             player.TakeDamage(meleeDamage * 2);
@@ -150,6 +159,7 @@ namespace Survivor_of_the_Bulge
                 }
                 else if (CurrentState == OgreBossState.Reset)
                 {
+                    // PSEUDOCODE: Wait for reset duration then return to idle
                     resetTimer += delta;
                     if (resetTimer >= resetDuration)
                     {
@@ -160,7 +170,7 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
-            // Use the normalized angleDeg for texture selection.
+            // PSEUDOCODE: Select which texture and animation timing to use based on current state and angle
             Texture2D chosenIdle, chosenAttack, chosenWalking;
             if (angleDeg >= 45 && angleDeg < 135)
             {
@@ -190,7 +200,7 @@ namespace Survivor_of_the_Bulge
             Texture2D currentTexture;
             int framesPerRowLocal, totalFramesLocal;
             float frameTime;
-
+            // PSEUDOCODE: Determine animation parameters per state
             if (CurrentState == OgreBossState.Idle)
             {
                 currentTexture = chosenIdle;
@@ -213,6 +223,7 @@ namespace Survivor_of_the_Bulge
                 frameTime = attackFrameTime;
             }
 
+            // PSEUDOCODE: Advance animation frame when timer exceeds frameTime
             animTimer += delta;
             if (animTimer >= frameTime)
             {
@@ -220,6 +231,7 @@ namespace Survivor_of_the_Bulge
                 animTimer = 0f;
             }
 
+            // PSEUDOCODE: Update bullets and check collisions
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -234,14 +246,16 @@ namespace Survivor_of_the_Bulge
 
         public override void Draw(SpriteBatch spriteBatch)
         {
+            // PSEUDOCODE: Skip drawing if boss is dead
             if (IsDead)
                 return;
 
-            // Normalize fixedAngle for drawing.
+            // PSEUDOCODE: Normalize angle for texture selection
             float angleDeg = MathHelper.ToDegrees(fixedAngle);
             if (angleDeg < 0)
                 angleDeg += 360;
 
+            // PSEUDOCODE: Choose appropriate directional textures
             Texture2D chosenIdle, chosenAttack, chosenWalking;
             if (angleDeg >= 45 && angleDeg < 135)
             {
@@ -268,6 +282,7 @@ namespace Survivor_of_the_Bulge
                 chosenWalking = walkingRightTexture;
             }
 
+            // PSEUDOCODE: Select texture and frame grid based on state
             Texture2D currentTexture;
             int framesPerRowLocal, rowsLocal;
             if (CurrentState == OgreBossState.Idle)
@@ -289,14 +304,18 @@ namespace Survivor_of_the_Bulge
                 rowsLocal = commonRows;
             }
 
+            // PSEUDOCODE: Compute source rectangle for current animation frame
             int frameW = currentTexture.Width / framesPerRowLocal;
             int frameH = currentTexture.Height / rowsLocal;
             Rectangle srcRect = new Rectangle((frameIndex % framesPerRowLocal) * frameW,
                                               (frameIndex / framesPerRowLocal) * frameH,
                                               frameW, frameH);
             Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
+
+            // PSEUDOCODE: Draw the boss sprite
             spriteBatch.Draw(currentTexture, Position, srcRect, Color.White, 0f, origin, Scale, SpriteEffects.None, 0f);
 
+            // PSEUDOCODE: Draw active bullets
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
         }
@@ -305,6 +324,7 @@ namespace Survivor_of_the_Bulge
         {
             get
             {
+                // PSEUDOCODE: Return a fixed-size bounding box centered on position
                 int size = 77;
                 return new Rectangle((int)(Position.X - size / 2), (int)(Position.Y - size / 2), size, size);
             }
@@ -312,6 +332,7 @@ namespace Survivor_of_the_Bulge
 
         public override void TakeDamage(int amount, Player player)
         {
+            // PSEUDOCODE: Apply damage and transition to aggro state when idle
             base.TakeDamage(amount, player);
             if (amount > 0 && CurrentState == OgreBossState.Idle)
             {
@@ -322,7 +343,7 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        // OgreBoss is pure melee; override Shoot() to do nothing.
+        // PSEUDOCODE: OgreBoss does not fire projectiles
         protected override void Shoot()
         {
             // No projectile firing.

@@ -16,12 +16,15 @@ namespace Survivor_of_the_Bulge
         protected Vector2 startPosition;
 
         public bool IsActive => isActive;
-        // Added public Damage property so that other classes can access bullet damage.
+        // PSEUDOCODE: Allow external access to bullet damage value
         public int Damage => damage;
+
+        // PSEUDOCODE: Define bounding box for collision detection
         public virtual Rectangle Bounds => new Rectangle((int)Position.X, (int)Position.Y, texture.Width, texture.Height);
 
         public Bullet(Texture2D texture, Vector2 startPosition, Vector2 direction, float speed, int damage, SpriteEffects spriteEffects, float maxRange)
         {
+            // PSEUDOCODE: Initialize bullet properties using constructor parameters
             this.texture = texture;
             this.startPosition = startPosition;
             Position = startPosition;
@@ -30,25 +33,32 @@ namespace Survivor_of_the_Bulge
             this.damage = damage;
             isActive = true;
             this.spriteEffects = spriteEffects;
-            // We ignore maxRange now so bullets only disappear when off-screen.
+
+            // PSEUDOCODE: Use full texture by default
             sourceRectangle = new Rectangle(0, 0, texture.Width, texture.Height);
+
+            // NOTE: maxRange is ignored; bullets deactivate only when off-screen
         }
 
         public virtual void Update(GameTime gameTime)
         {
+            // PSEUDOCODE: Move bullet along its direction each frame
             Position += direction * speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            // Deactivate bullet if it goes off screen (assuming a screen size of 1600x980).
+
+            // PSEUDOCODE: Deactivate bullet if it leaves screen bounds
             if (Position.X < 0 || Position.X > 1600 || Position.Y < 0 || Position.Y > 980)
                 Deactivate();
         }
 
         public virtual void Deactivate()
         {
+            // PSEUDOCODE: Mark bullet as inactive so it can be removed
             isActive = false;
         }
 
         public virtual void Draw(SpriteBatch spriteBatch)
         {
+            // PSEUDOCODE: Render bullet only if it remains active
             if (IsActive)
                 spriteBatch.Draw(texture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
         }

@@ -45,10 +45,14 @@ namespace Survivor_of_the_Bulge
 
     public static class SaveLoadManager
     {
+        // PSEUDOCODE: Define where the XML save file will be stored.
         private static string savePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "SurvivorOfTheBulge_GameData.xml");
 
+        /// <summary>
+        /// PSEUDOCODE: Serialize the provided GameData object to XML and write it to disk.
+        /// </summary>
         public static void SaveGameData(GameData data)
         {
             try
@@ -65,6 +69,9 @@ namespace Survivor_of_the_Bulge
             }
         }
 
+        /// <summary>
+        /// PSEUDOCODE: If a save file exists, deserialize its XML into a GameData object and return it; otherwise return a new GameData.
+        /// </summary>
         public static GameData LoadGameData()
         {
             try
@@ -85,12 +92,19 @@ namespace Survivor_of_the_Bulge
             return new GameData();
         }
 
-        // Testing hooks.
+        // Testing hooks:
+
+        /// <summary>
+        /// PSEUDOCODE: Return the full filepath used for saving, for verification in tests.
+        /// </summary>
         public static string GetSaveFilePath()
         {
             return savePath;
         }
 
+        /// <summary>
+        /// PSEUDOCODE: Delete the existing save file, if any, to reset game data.
+        /// </summary>
         public static void DeleteSavedGameData()
         {
             if (File.Exists(savePath))

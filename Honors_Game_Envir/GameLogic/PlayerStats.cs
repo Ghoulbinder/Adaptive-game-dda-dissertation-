@@ -19,6 +19,9 @@ namespace Survivor_of_the_Bulge
 
         private SpriteFont font;
 
+        /// <summary>
+        /// PSEUDOCODE: Initialize player stats with provided values and reset total damage taken.
+        /// </summary>
         public PlayerStats(int health, int lives, int attackDamage, float attackSpeed, float movementSpeed, int experience, int level, SpriteFont font)
         {
             Health = health;
@@ -32,6 +35,9 @@ namespace Survivor_of_the_Bulge
             TotalDamageTaken = 0; // Initialize total damage taken to zero.
         }
 
+        /// <summary>
+        /// PSEUDOCODE: Increase the player's experience by the given amount and check for level-up.
+        /// </summary>
         public void IncreaseExperience(int amount)
         {
             Experience += amount;
@@ -41,6 +47,9 @@ namespace Survivor_of_the_Bulge
             }
         }
 
+        /// <summary>
+        /// PSEUDOCODE: Handle leveling up: increment level, reset experience, and improve stats.
+        /// </summary>
         private void LevelUp()
         {
             Level++;
@@ -51,6 +60,9 @@ namespace Survivor_of_the_Bulge
             Health += 20;
         }
 
+        /// <summary>
+        /// PSEUDOCODE: Update player's health; calculate damage taken if health decreased.
+        /// </summary>
         public void UpdateHealth(int newHealth)
         {
             // If newHealth is lower than current Health, calculate the damage taken.
@@ -61,6 +73,9 @@ namespace Survivor_of_the_Bulge
             Health = newHealth;
         }
 
+        /// <summary>
+        /// PSEUDOCODE: Draw the player's stats on screen at the given position.
+        /// </summary>
         public void Draw(SpriteBatch spriteBatch, Vector2 position)
         {
             string statsText = $"Health: {Health}\n" +

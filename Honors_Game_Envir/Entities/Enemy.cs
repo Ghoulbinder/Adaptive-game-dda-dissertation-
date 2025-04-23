@@ -50,7 +50,12 @@ namespace Survivor_of_the_Bulge
             {
                 int frameW = sourceRectangle.Width;
                 int frameH = sourceRectangle.Height;
-                return new Rectangle((int)(Position.X - frameW / 2f), (int)(Position.Y - frameH / 2f), frameW, frameH);
+                return new Rectangle(
+                    (int)(Position.X - frameW / 2f),
+                    (int)(Position.Y - frameH / 2f),
+                    frameW,
+                    frameH
+                );
             }
         }
 
@@ -61,25 +66,35 @@ namespace Survivor_of_the_Bulge
         protected int baseHealth;
         protected int baseDamage;
 
-        public Enemy(Texture2D back, Texture2D front, Texture2D left,
-                     Texture2D bulletHorizontal, Texture2D bulletVertical,
-                     Vector2 startPosition, Direction startDirection,
-                     int health, int bulletDamage)
+        public Enemy(
+            Texture2D back,
+            Texture2D front,
+            Texture2D left,
+            Texture2D bulletHorizontal,
+            Texture2D bulletVertical,
+            Vector2 startPosition,
+            Direction startDirection,
+            int health,
+            int bulletDamage)
         {
+            // PSEUDOCODE: Store textures for later drawing
             backTexture = back;
             frontTexture = front;
             leftTexture = left;
             bulletHorizontalTexture = bulletHorizontal;
             bulletVerticalTexture = bulletVertical;
 
+            // PSEUDOCODE: Initialize position and direction
             Position = startPosition;
             currentDirection = startDirection;
+
+            // PSEUDOCODE: Set initial health and damage
             Health = health;
             BulletDamage = bulletDamage;
-
             baseHealth = health;
             baseDamage = bulletDamage;
 
+            // PSEUDOCODE: Initialize movement, firing, and animation parameters
             MovementSpeed = 100f;
             bulletSpeed = 300f;
             frameTime = 0.1f;
@@ -89,6 +104,8 @@ namespace Survivor_of_the_Bulge
             currentFrame = 0;
             int frameW = leftTexture.Width / totalFrames;
             sourceRectangle = new Rectangle(0, 0, frameW, leftTexture.Height);
+
+            // PSEUDOCODE: Prepare bullet list and initial state
             bullets = new List<Bullet>();
             currentState = EnemyState.Patrol;
         }
@@ -98,19 +115,21 @@ namespace Survivor_of_the_Bulge
         /// </summary>
         public void SetBaseStats(int health, int damage)
         {
+            // PSEUDOCODE: Remember original stats for scaling
             baseHealth = health;
             baseDamage = damage;
         }
 
         /// <summary>
-        /// Applies difficulty modifiers to MovementSpeed and BulletDamage.
-        /// Also, if the current Health exceeds the new maximum (baseHealth × multiplier), reduce it.
+        /// Applies difficulty modifiers to stats.
         /// </summary>
         public virtual void ApplyDifficultyModifiers()
         {
+            // PSEUDOCODE: Scale speed and damage based on current difficulty
             MovementSpeed = 100f * DifficultyManager.Instance.EnemySpeedMultiplier;
             BulletDamage = (int)(baseDamage * DifficultyManager.Instance.EnemyDamageMultiplier);
 
+            // PSEUDOCODE: Cap health to scaled maximum
             int newMaxHealth = (int)(baseHealth * DifficultyManager.Instance.EnemyHealthMultiplier);
             if (Health > newMaxHealth)
                 Health = newMaxHealth;
@@ -118,15 +137,17 @@ namespace Survivor_of_the_Bulge
 
         public virtual void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
+            // PSEUDOCODE: Skip update if already dead
             if (isDead)
                 return;
 
-            // Update speed, damage, and adjust health if necessary.
+            // PSEUDOCODE: Apply difficulty-based stat adjustments
             ApplyDifficultyModifiers();
 
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             float distance = Vector2.Distance(Position, playerPosition);
 
+            // PSEUDOCODE: Determine behavior state based on distance
             if (distance <= shootingRange)
                 currentState = EnemyState.Attack;
             else if (distance <= chaseRange)
@@ -134,6 +155,7 @@ namespace Survivor_of_the_Bulge
             else
                 currentState = EnemyState.Patrol;
 
+            // PSEUDOCODE: Execute behavior for current state
             switch (currentState)
             {
                 case EnemyState.Patrol:
@@ -152,6 +174,7 @@ namespace Survivor_of_the_Bulge
                     break;
             }
 
+            // PSEUDOCODE: Advance animation frame
             timer += delta;
             if (timer >= frameTime)
             {
@@ -160,15 +183,14 @@ namespace Survivor_of_the_Bulge
             }
             UpdateFrameDimensions();
 
+            // PSEUDOCODE: Update bullets and handle collisions with player
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
-                // If the bullet collides with the player's bounds.
                 if (bullet.IsActive && player.Bounds.Intersects(bullet.Bounds))
                 {
                     player.TakeDamage(bullet.Damage);
                     bullet.Deactivate();
-                    // Increment the counter for bullets used against enemies.
                     Game1.Instance.bulletsUsedAgainstEnemiesThisSession++;
                 }
             }
@@ -177,6 +199,7 @@ namespace Survivor_of_the_Bulge
 
         protected virtual void UpdateFrameDimensions()
         {
+            // PSEUDOCODE: Choose correct texture for current direction
             int textureWidth = 0, textureHeight = 0;
             switch (currentDirection)
             {
@@ -194,13 +217,21 @@ namespace Survivor_of_the_Bulge
                     textureHeight = leftTexture.Height;
                     break;
             }
+
+            // PSEUDOCODE: Compute source rectangle for animation frame
             int frameW = textureWidth / totalFrames;
             int frameH = textureHeight;
-            sourceRectangle = new Rectangle(currentFrame * frameW, 0, frameW, frameH);
+            sourceRectangle = new Rectangle(
+                currentFrame * frameW,
+                0,
+                frameW,
+                frameH
+            );
         }
 
         public virtual void TakeDamage(int amount, Player player)
         {
+            // PSEUDOCODE: Subtract damage and check for death
             if (isDead)
                 return;
 
@@ -216,6 +247,7 @@ namespace Survivor_of_the_Bulge
 
         protected void AwardExperience(Player player)
         {
+            // PSEUDOCODE: Give experience only once
             if (!experienceAwarded)
             {
                 player.GainExperience(ExperienceReward);
@@ -225,9 +257,11 @@ namespace Survivor_of_the_Bulge
 
         public virtual void Draw(SpriteBatch spriteBatch)
         {
+            // PSEUDOCODE: Skip drawing if dead
             if (isDead)
                 return;
 
+            // PSEUDOCODE: Select texture based on direction
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
             switch (currentDirection)
@@ -246,65 +280,68 @@ namespace Survivor_of_the_Bulge
                     currentTexture = frontTexture;
                     break;
             }
-            spriteBatch.Draw(currentTexture, Position, sourceRectangle, Color.White, 0f, Vector2.Zero, 1f, spriteEffects, 0f);
 
+            // PSEUDOCODE: Draw character and its bullets
+            spriteBatch.Draw(
+                currentTexture,
+                Position,
+                sourceRectangle,
+                Color.White,
+                0f,
+                Vector2.Zero,
+                1f,
+                spriteEffects,
+                0f
+            );
             foreach (var bullet in bullets)
-            {
                 bullet.Draw(spriteBatch);
-            }
         }
 
         protected virtual void Patrol(Viewport viewport)
         {
-            // Implement patrol behavior if desired.
+            // PSEUDOCODE: Default patrol behavior (no-op placeholder)
         }
 
         protected virtual void ChasePlayer(Vector2 playerPosition)
         {
-            Vector2 directionVector = playerPosition - Position;
-            if (directionVector != Vector2.Zero)
+            // PSEUDOCODE: Move toward player and update direction
+            Vector2 dirVec = playerPosition - Position;
+            if (dirVec != Vector2.Zero)
             {
-                Vector2 moveDir = Vector2.Normalize(directionVector);
-                Position += moveDir * MovementSpeed * 0.02f;
-                if (Math.Abs(moveDir.X) > Math.Abs(moveDir.Y))
-                    currentDirection = moveDir.X < 0 ? Direction.Left : Direction.Right;
-                else
-                    currentDirection = moveDir.Y < 0 ? Direction.Up : Direction.Down;
+                Vector2 move = Vector2.Normalize(dirVec);
+                Position += move * MovementSpeed * 0.02f;
+                currentDirection = Math.Abs(move.X) > Math.Abs(move.Y)
+                    ? (move.X < 0 ? Direction.Left : Direction.Right)
+                    : (move.Y < 0 ? Direction.Up : Direction.Down);
             }
         }
 
         protected virtual void Shoot()
         {
-            Vector2 bulletDirection;
-            switch (currentDirection)
+            // PSEUDOCODE: Choose bullet direction and texture
+            Vector2 dirVec = currentDirection switch
             {
-                case Direction.Up:
-                    bulletDirection = new Vector2(0, -1);
-                    break;
-                case Direction.Down:
-                    bulletDirection = new Vector2(0, 1);
-                    break;
-                case Direction.Left:
-                    bulletDirection = new Vector2(-1, 0);
-                    break;
-                case Direction.Right:
-                    bulletDirection = new Vector2(1, 0);
-                    break;
-                default:
-                    bulletDirection = new Vector2(1, 0);
-                    break;
-            }
-            Vector2 bulletPos = Position;
-            Bullet bullet = new Bullet(
-                (currentDirection == Direction.Left || currentDirection == Direction.Right) ? bulletHorizontalTexture : bulletVerticalTexture,
-                bulletPos,
-                bulletDirection,
+                Direction.Up => new Vector2(0, -1),
+                Direction.Down => new Vector2(0, 1),
+                Direction.Left => new Vector2(-1, 0),
+                Direction.Right => new Vector2(1, 0),
+                _ => new Vector2(1, 0)
+            };
+            Vector2 spawn = Position;
+
+            // PSEUDOCODE: Fire bullet and add to list
+            Bullet b = new Bullet(
+                (currentDirection == Direction.Left || currentDirection == Direction.Right)
+                    ? bulletHorizontalTexture
+                    : bulletVerticalTexture,
+                spawn,
+                dirVec,
                 bulletSpeed,
                 BulletDamage,
                 SpriteEffects.None,
                 BulletRange
             );
-            bullets.Add(bullet);
+            bullets.Add(b);
         }
     }
 }

@@ -5,7 +5,7 @@ namespace Survivor_of_the_Bulge
 {
     public class Boss : Enemy
     {
-        // Boss-specific scaling factor.
+        // PSEUDOCODE: Define scaling factor for boss rendering
         public float Scale { get; set; } = 2.0f;
 
         public Boss(Texture2D back, Texture2D front, Texture2D left,
@@ -14,36 +14,33 @@ namespace Survivor_of_the_Bulge
                     int health, int bulletDamage)
             : base(back, front, left, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
         {
+            // PSEUDOCODE: Initialize default boss behavior parameters
             MovementSpeed = 150f;
             FiringInterval = 1.5f;
             BulletRange = 500f;
             CollisionDamage = 30;
         }
 
-        // Override Update so that each frame the boss updates its stats immediately.
+        // PSEUDOCODE: Each frame, adjust stats then perform standard enemy update
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
         {
-            // Apply boss-specific difficulty modifiers.
             ApplyDifficultyModifiers();
-            // Then use the standard enemy update logic.
             base.Update(gameTime, viewport, playerPosition, player);
         }
 
-        // Override ApplyDifficultyModifiers for Boss using boss-specific multipliers.
+        // PSEUDOCODE: Scale boss stats according to current difficulty multipliers
         public override void ApplyDifficultyModifiers()
         {
-            // Update MovementSpeed and BulletDamage using boss-specific multipliers.
             MovementSpeed = 150f * DifficultyManager.Instance.BossMovementSpeedMultiplier;
             BulletDamage = (int)(baseDamage * DifficultyManager.Instance.BossDamageMultiplier);
-            // Calculate new maximum health.
+
             int newMaxHealth = (int)(baseHealth * DifficultyManager.Instance.BossHealthMultiplier);
-            // Immediately update Health to the new maximum.
             Health = newMaxHealth;
-            // Update FiringInterval based on boss attack speed multiplier.
+
             FiringInterval = 1.5f / DifficultyManager.Instance.BossAttackSpeedMultiplier;
         }
 
-        // Override Bounds with center-based logic using scaling.
+        // PSEUDOCODE: Compute bounding box centered on position, scaled by Scale
         public override Rectangle Bounds
         {
             get
@@ -72,13 +69,14 @@ namespace Survivor_of_the_Bulge
             }
         }
 
-        // Override Draw to apply custom scaling.
+        // PSEUDOCODE: Draw boss sprite using current direction and scaling
         public override void Draw(SpriteBatch spriteBatch)
         {
             if (IsDead) return;
 
             Texture2D currentTexture = frontTexture;
             SpriteEffects spriteEffects = SpriteEffects.None;
+
             switch (currentDirection)
             {
                 case Direction.Left:
@@ -112,6 +110,7 @@ namespace Survivor_of_the_Bulge
                 0f
             );
 
+            // PSEUDOCODE: Draw all active boss bullets
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
         }

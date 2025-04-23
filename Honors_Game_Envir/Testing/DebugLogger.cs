@@ -37,10 +37,18 @@ namespace Survivor_of_the_Bulge
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "SurvivorOfTheBulge_DebugLog.xml");
 
-        // Reads existing entries (if any), appends the new entry, and saves all.
+        /// <summary>
+        /// PSEUDOCODE:
+        /// 1. If a debug log file exists, deserialize its contents into a list.
+        /// 2. If an error occurs or the file doesn't exist, start with an empty list.
+        /// 3. Append the new entry to the list.
+        /// 4. Serialize the updated list back to the same XML file.
+        /// </summary>
         public static void AppendLogEntry(DebugLogEntry entry)
         {
             List<DebugLogEntry> entries = new List<DebugLogEntry>();
+
+            // PSEUDOCODE: Try to read existing log entries from disk
             if (File.Exists(logPath))
             {
                 try
@@ -54,12 +62,15 @@ namespace Survivor_of_the_Bulge
                 catch (Exception ex)
                 {
                     Debug.WriteLine("Error reading existing debug log: " + ex.Message);
-                    // In case of an error, start a new list.
+                    // PSEUDOCODE: On failure, reset to an empty list
                     entries = new List<DebugLogEntry>();
                 }
             }
+
+            // PSEUDOCODE: Add the new log entry to the list
             entries.Add(entry);
 
+            // PSEUDOCODE: Write the updated list back to disk
             try
             {
                 XmlSerializer serializer2 = new XmlSerializer(typeof(List<DebugLogEntry>));
@@ -74,13 +85,23 @@ namespace Survivor_of_the_Bulge
             }
         }
 
+        /// <summary>
+        /// PSEUDOCODE:
+        /// Return the full path where the debug log is stored.
+        /// </summary>
         public static string GetLogPath()
         {
+            // PSEUDOCODE: Return the configured log file path
             return logPath;
         }
 
+        /// <summary>
+        /// PSEUDOCODE:
+        /// If the debug log file exists, delete it to start fresh.
+        /// </summary>
         public static void ClearLog()
         {
+            // PSEUDOCODE: Remove the log file if it exists
             if (File.Exists(logPath))
             {
                 File.Delete(logPath);

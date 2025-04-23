@@ -33,12 +33,12 @@ namespace Survivor_of_the_Bulge
         // Last known player position for aiming.
         private Vector2 lastTargetPosition;
 
-        // New bullet textures for ButterflyBoss.
+        // Bullet textures for ButterflyBoss.
         private Texture2D butterflyBulletHorizontal;
         private Texture2D butterflyBulletVertical;
 
         /// <summary>
-        /// Constructs a ButterflyBoss.
+        /// Constructs a ButterflyBoss with specified textures, position, direction, health, and damage.
         /// </summary>
         public ButterflyBoss(
             Texture2D attackTexture,
@@ -49,23 +49,26 @@ namespace Survivor_of_the_Bulge
             Direction startDirection,
             int health,
             int bulletDamage)
-            : base(attackTexture, attackTexture, attackTexture, bulletHorizontal, bulletVertical, startPosition, startDirection, health, bulletDamage)
+            : base(attackTexture, attackTexture, attackTexture,
+                   bulletHorizontal, bulletVertical,
+                   startPosition, startDirection,
+                   health, bulletDamage)
         {
+            // PSEUDOCODE: Initialize textures and movement parameters
             this.attackTexture = attackTexture;
             this.walkingTexture = walkingTexture;
             butterflyBulletHorizontal = bulletHorizontal;
             butterflyBulletVertical = bulletVertical;
-            MovementSpeed = 120f;
-            FiringInterval = 1.5f;
-            BulletRange = 500f;
-            CollisionDamage = 30;
+            MovementSpeed = 120f;                // Base movement speed
+            FiringInterval = 1.5f;               // Time between shots
+            BulletRange = 500f;                  // Maximum bullet travel
+            CollisionDamage = 30;                // Damage on contact
             CurrentState = ButterflyBossState.Walking;
             animTimer = 0f;
             frameIndex = 0;
 
-            // **** Experience gain modification: set boss exp reward ****
+            // PSEUDOCODE: Set experience reward on defeat
             this.ExperienceReward = 50;
-            // **** End modification ****
         }
 
         public override void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition, Player player)
@@ -73,13 +76,15 @@ namespace Survivor_of_the_Bulge
             float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             stateTimer += delta;
             lastTargetPosition = playerPosition;
-            float distance = Vector2.Distance(Position, playerPosition);
 
+            // PSEUDOCODE: Determine state based on distance to player
+            float distance = Vector2.Distance(Position, playerPosition);
             if (distance > 200)
                 CurrentState = ButterflyBossState.Walking;
             else
                 CurrentState = ButterflyBossState.Attack;
 
+            // PSEUDOCODE: Select animation settings based on state
             float frameTime;
             int totalFrames;
             int framesPerRowUsed;
@@ -95,6 +100,8 @@ namespace Survivor_of_the_Bulge
                 totalFrames = walkingTotalFrames;
                 framesPerRowUsed = walkingFramesPerRow;
             }
+
+            // PSEUDOCODE: Advance animation frame when timer elapses
             animTimer += delta;
             if (animTimer >= frameTime)
             {
@@ -102,6 +109,7 @@ namespace Survivor_of_the_Bulge
                 animTimer = 0f;
             }
 
+            // PSEUDOCODE: Execute behavior based on current state
             if (CurrentState == ButterflyBossState.Walking)
             {
                 ChasePlayer(playerPosition);
@@ -116,6 +124,7 @@ namespace Survivor_of_the_Bulge
                 }
             }
 
+            // PSEUDOCODE: Update each bullet and check for collisions
             foreach (var bullet in bullets)
             {
                 bullet.Update(gameTime);
@@ -127,12 +136,11 @@ namespace Survivor_of_the_Bulge
             }
             bullets.RemoveAll(b => !b.IsActive);
 
-            // **** Award experience on death ****
+            // PSEUDOCODE: Award experience if boss is defeated
             if (IsDead)
             {
                 AwardExperience(player);
             }
-            // **** End modification ****
         }
 
         public override void Draw(SpriteBatch spriteBatch)
@@ -140,6 +148,7 @@ namespace Survivor_of_the_Bulge
             if (IsDead)
                 return;
 
+            // PSEUDOCODE: Choose texture and layout based on state
             Texture2D currentTexture;
             int framesPerRowUsed, rowsUsed;
             if (CurrentState == ButterflyBossState.Attack)
@@ -154,14 +163,31 @@ namespace Survivor_of_the_Bulge
                 framesPerRowUsed = walkingFramesPerRow;
                 rowsUsed = walkingRows;
             }
+
+            // PSEUDOCODE: Calculate source rectangle for current animation frame
             int frameW = currentTexture.Width / framesPerRowUsed;
             int frameH = currentTexture.Height / rowsUsed;
-            Rectangle srcRect = new Rectangle((frameIndex % framesPerRowUsed) * frameW,
-                                              (frameIndex / framesPerRowUsed) * frameH,
-                                              frameW, frameH);
+            Rectangle srcRect = new Rectangle(
+                (frameIndex % framesPerRowUsed) * frameW,
+                (frameIndex / framesPerRowUsed) * frameH,
+                frameW, frameH
+            );
             Vector2 origin = new Vector2(frameW / 2f, frameH / 2f);
-            spriteBatch.Draw(currentTexture, Position, srcRect, Color.White, 0f, origin, Scale, SpriteEffects.None, 0f);
 
+            // PSEUDOCODE: Render boss sprite
+            spriteBatch.Draw(
+                currentTexture,
+                Position,
+                srcRect,
+                Color.White,
+                0f,
+                origin,
+                Scale,
+                SpriteEffects.None,
+                0f
+            );
+
+            // PSEUDOCODE: Draw active bullets
             foreach (var bullet in bullets)
                 bullet.Draw(spriteBatch);
         }
