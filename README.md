@@ -146,7 +146,7 @@ Built upon research in dynamic difficulty adjustment, flow theory (Csikszentmiha
 
 ## 👤 Author
 
-**[Your Name]**
+**Romeo Mcdonald**
 - GitHub: [@Ghoulbinder](https://github.com/Ghoulbinde)
 - Dissertation: Honors Project in Interactive Computing
 
