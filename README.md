@@ -147,7 +147,7 @@ Built upon research in dynamic difficulty adjustment, flow theory (Csikszentmiha
 ## 👤 Author
 
 **[Your Name]**
-- GitHub: [@cloudsaber](https://github.com/cloudsaber)
+- GitHub: [@Ghoulbinder](https://github.com/Ghoulbinde)
 - Dissertation: Honors Project in Interactive Computing
 
 ## 📄 License
